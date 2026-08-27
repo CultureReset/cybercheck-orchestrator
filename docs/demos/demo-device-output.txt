@@ -1,0 +1,65 @@
+PROVISIONING THE WORKSPACE
+--------------------------
+ cloud_android  ready    volume vol-582389e9
+ container      ready    volume vol-582389e9-svc
+ the android instance and the container are separate workloads on the same host
+OWNER INSTALLS APPS ON THEIR OWN DEVICE AND LOGS IN
+---------------------------------------------------
+ facebook          com.facebook.katana                logged in as Ocean View 
+Bistro
+ google_business   com.google.android.apps.business   logged in as Ocean View 
+Bistro
+ yelp              com.yelp.android.biz               logged in as Ocean View 
+Bistro
+ what each app is mapped to carry:
+   facebook          ["hours","contact.phone"]
+   google_business   ["hours","contact.phone"]
+   yelp              ["hours"]
+OWNER CHANGES HOURS ONCE, IN ONE PLACE
+--------------------------------------
+ owner set hours to 07:00 - 22:00. nobody told the platform where to put it.
+ draining the outbox...
+ facebook          route android  succeeded  verification: verified
+ google_business   route android  succeeded  verification: verified
+ yelp              route android  succeeded  verification: verified
+WHAT EACH APP NOW SHOWS (read off the screen, not assumed)
+----------------------------------------------------------
+ canonical: {"opens":"07:00","closes":"22:00"}
+   facebook          {"opens":"07:00","closes":"22:00"} in sync: true
+   google_business   {"opens":"07:00","closes":"22:00"} in sync: true
+   yelp              {"opens":"07:00","closes":"22:00"} in sync: true
+ sync state per app per key:
+   facebook          contact.phone  DRIFTED
+   facebook          hours          in sync
+   google_business   contact.phone  DRIFTED
+   google_business   hours          in sync
+   yelp              hours          in sync
+YELP MOVES A FIELD (the map no longer matches the app)
+------------------------------------------------------
+ result: failed, verification: failed
+   repair queue: yelp — no field "from" on screen
+                 failing step: {"type":"07:00","into":"from"}
+ it did not guess, and it did not report success.
+OWNER OPENS THE LIVE SCREEN FROM THEIR DASHBOARD
+------------------------------------------------
+ session control, stream /stream/cff692f1-cd15-4451-ba5e-c555827925ba?
+t=aa3efcef86378669ac8daa75a44b33de
+ app in the foreground: com.yelp.android.biz
+ fields visible: {"Business Info":1,"Hours of 
+Operation":1,"Update":1,"to":"22:00","start_time":"07:00"}
+ same instance the automations drive, not a copy
+THE BUSINESS MCP SURFACE
+------------------------
+ ghost:ocean-view
+   ghost://ocean-view/about           from business_profile
+   ghost://ocean-view/hours           from business_profile
+   ghost://ocean-view/contact         from business_profile
+ reading ghost://ocean-view/hours: 0 weekday rows
+ private tables that exist but are not on the surface: 0
+SHARED AUTOMATION: WRITTEN ONCE, INSTALLED ANYWHERE
+---------------------------------------------------
+ reef-charters installed "lead-to-crm" authored by ocean-view
+   reef-charters contact: Cam Ruiz via form:inquiry
+ after ocean-view published 1.1.0, with no action by reef-charters:
+   deal: Inquiry from Priya Nandan (new)
+ they hold a reference to the automation, not a copy of it.

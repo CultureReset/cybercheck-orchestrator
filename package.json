@@ -1,0 +1,22 @@
+{
+  "name": "ghost-platform",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "demo": "node demo.js",
+    "demo:device": "node demo-device.js",
+    "demo:modular": "node demo-modular.js",
+    "demo:surfaces": "node demo-surfaces.js",
+    "start": "node src/http/server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1",
+    "pg": "^8.23.0",
+    "pg-mem": "^3.0.14"
+  },
+  "type": "module"
+}

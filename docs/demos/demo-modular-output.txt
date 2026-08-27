@@ -1,0 +1,73 @@
+SLOTS THE KERNEL DECLARES
+-------------------------
+ workspace.executor   needs ["run","screenshot","prepare"]     one
+ model                needs ["models","complete"]              many
+ harness              needs ["run"]                            many
+ builder              needs ["plan"]                           one
+ memory               needs ["remember","recall"]              one
+ sandbox              needs ["test"]                           one
+ the kernel names no vendor. a package fills the slot.
+WHAT IS BOUND RIGHT NOW
+-----------------------
+ builder              composer           platform default
+ harness              loop_harness       platform default
+ model                hosted_models      platform default
+ workspace.executor   android_cloud      platform default
+SWAPPING THE EXECUTION LAYER
+----------------------------
+ cloud executor: hours pushed, result 
+{"packageKey":"facebook","key":"hours","wrote":{"opens":"07:00","closes":"22:00"}}
+ rebound to: android_local_node  
+({"latency":"lan","persistent":true,"location":"on_premise"})
+ pushes so far: verified, verified
+ same appmaps, same capabilities, same receipts. one row changed where it runs.
+MODEL ROUTING ACROSS PROVIDERS
+------------------------------
+ need=reasoning            -> hosted_models:reasoning-large
+ need=cheap                -> hosted_models:fast-small
+ need=vision               -> local_models:node-vision
+ need=reasoning local-only -> local_models:node-small
+ with the hosted provider unreachable:
+ need=reasoning            -> local_models:node-small
+ recorded: chose local_models:node-small, fell back from hosted_models:fast-small
+HARNESS RUN — REACH IS THE ACTOR'S REACH
+----------------------------------------
+ owner run: done
+   qr_menu.add_item       succeeded / verified
+ staff run: done
+   qr_menu.add_item       succeeded / verified
+ capabilities offered to the owner's harness: 7
+ capabilities offered to the staff harness:  1
+ withheld from staff: business.set_fact, business.set_hours, channel.read, 
+business_profile.update_contact, qr_menu.set_availability, qr_menu.remove_item
+ the harness is handed the actor's reach. it cannot ask for more.
+BUILDER — AN INTENT BECOMES A PACKAGE
+-------------------------------------
+ intent: build a public song request board customers can scan and add a song title 
+and artist
+ proposed package: public_song_request (app)
+ table: public_song_request fields ["name","song","title","artist"]
+ capabilities: public_song_request.create, public_song_request.list, 
+public_song_request.update, public_song_request.remove
+ notes:
+   - declares one table "public_song_request" with 4 fields
+   - reuses existing capabilities: business_profile.update_contact, 
+forms.create_form, forms.submit
+   - publishes a public section
+ state: proposed — nothing exists yet
+ approved. package public_song_request installed.
+ signature: valid, signer business:ocean-view, tier community
+ created a row through the new capability: verification verified
+ public profile sections now: About | Hours | Menu | Public Song Request | Contact
+IMPORT PIPELINE — OPEN SOURCE BECOMES A PACKAGE
+-----------------------------------------------
+ example/waitlist -> published as waitlist
+   license MIT, pinned 9f2c1ab, signed
+ example/copyleft -> rejected at license: AGPL-3.0 cannot be redistributed inside 
+a package
+ example/greedy   -> rejected at permissions: declares capability outside its 
+namespace: crm.delete_everything
+ import jobs:
+   example/waitlist     published
+   example/copyleft     rejected at license
+   example/greedy       rejected at permissions

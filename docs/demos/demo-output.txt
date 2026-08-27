@@ -1,0 +1,71 @@
+PACKAGES AVAILABLE
+------------------
+ availability       app    Availability
+ composer           provider Composition Planner
+ business_profile   app    Business Profile
+ facebook           channel_app Facebook
+ google_business    channel_app Google Business Profile
+ yelp               channel_app Yelp for Business
+ crm                app    CRM
+ forms              app    Forms & Lead Capture
+ loop_harness       provider Loop Harness
+ android_cloud      provider Cloud Android
+ android_local_node provider Local Node Android
+ hosted_models      provider Hosted Models
+ local_models       provider Local Models
+ qr_menu            app    QR Menu
+INSTALLING APPS
+---------------
+ installed business_profile
+ installed qr_menu
+ installed forms
+ tables the kernel provisioned on their behalf:
+   forms.form -> pkg_forms__form
+   forms.submission -> pkg_forms__submission
+   qr_menu.menu_item -> pkg_qr_menu__menu_item
+OWNER SETS CANONICAL FACTS
+--------------------------
+ hours set, verification: verified
+STAFF TRIES A SENSITIVE ACTION
+------------------------------
+ state: awaiting_approval (waiting on the owner)
+ after owner approval: succeeded, verification: verified
+MENU ITEMS THROUGH THE APP
+--------------------------
+ + Blackened Grouper    verification: verified
+ + Royal Red Shrimp     verification: verified
+ + Key Lime Pie         verification: verified
+A LEAD ARRIVES BEFORE CRM IS INSTALLED
+--------------------------------------
+ forms recorded it. nothing else happened, because nothing else was listening.
+OWNER INSTALLS CRM, THEN ANOTHER LEAD ARRIVES
+---------------------------------------------
+ crm contacts now:
+   Jill Okonkwo     jill@example.com       via form:contact
+ forms was never modified. it does not import crm.
+WHAT THE OUTSIDE WORLD STILL BELIEVES
+-------------------------------------
+ canonical: +1-251-555-0134
+   google     +1-251-555-0100    in sync: false
+PUBLIC PROFILE (assembled from installed apps only)
+---------------------------------------------------
+ sections: About | Hours | Menu | Get in touch | Contact
+ menu: ["Mains","Dessert"]
+OWNER UNINSTALLS THE MENU APP
+-----------------------------
+ sections: About | Hours | Get in touch | Contact
+ menu rows still on disk: 3  (data retained: true)
+ re-adding after uninstall: forbidden — not permitted: qr_menu.add_item
+RECEIPT LEDGER
+--------------
+ verified  business.set_fact
+ verified  business.set_fact
+ verified  business.set_hours
+ verified  business.set_temporary_closure
+ verified  qr_menu.add_item
+ verified  qr_menu.add_item
+ verified  qr_menu.add_item
+ verified  forms.create_form
+ verified  forms.submit
+ verified  forms.submit
+ chain: {"ok":true,"count":10}

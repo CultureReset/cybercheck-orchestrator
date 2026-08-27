@@ -1,0 +1,27 @@
+{
+  "key": "availability",
+  "version": "1.0.0",
+  "kind": "app",
+  "name": "Availability",
+  "summary": "Real availability shown on the business's own page, with the search captured before anyone leaves.",
+  "requires": ["business_profile"],
+  "capabilities": ["availability.define", "availability.search", "availability.hold", "availability.release"],
+  "sensitive": ["availability.release"],
+  "schema": {
+    "slot": {
+      "fields": {
+        "resource":   { "type": "text", "required": true },
+        "on_date":    { "type": "date", "required": true },
+        "starts":     { "type": "time" },
+        "ends":       { "type": "time" },
+        "capacity":   { "type": "int", "default": 1 },
+        "held":       { "type": "int", "default": 0 },
+        "price":      { "type": "money" },
+        "source":     { "type": "text", "default": "owner" }
+      }
+    }
+  },
+  "public": [
+    { "key": "availability", "title": "Check Availability", "icon": "calendar", "order": 25, "renderer": "calendar" }
+  ]
+}

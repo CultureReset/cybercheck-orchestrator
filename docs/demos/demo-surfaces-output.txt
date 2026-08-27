@@ -1,0 +1,41 @@
+SURFACE ONE: PUBLIC, NO CREDENTIAL
+----------------------------------
+ ghost:circle-boats  (public)
+   ghost://circle-boats/about             from business_profile
+   ghost://circle-boats/hours             from business_profile
+   ghost://circle-boats/availability      from availability
+   ghost://circle-boats/menu              from qr_menu
+   ghost://circle-boats/contact           from business_profile
+ tools: read_about, read_hours, read_availability, read_menu, read_contact, 
+check_availability
+SURFACE TWO: PRIVATE, TOKEN BOUND TO A MEMBERSHIP
+-------------------------------------------------
+ without a token: unauthorized
+ owner token -> acting as owner, 12 tools
+ staff token -> acting as staff, 2 tools
+   staff sees: availability.search, availability.hold (asks)
+   script-only on the owner surface: channel.push
+ the same token cannot see another business. the same person, different business, 
+different tools.
+THE LINKS PAGE
+--------------
+ sections rendered: Hours | Check Availability | Menu
+ every one is a projection from an installed app, not a hand-written page
+ page size: 6.5 kb, zero outbound links to a booking platform
+A VISITOR PICKS A DATE
+----------------------
+ intent rows before: 0
+ searched 2026-08-25 for 2 -> 2 matches
+   Single Seater   09:00:00-13:00:00  $150  4 left
+   Double Seater   14:00:00-18:00:00  $200  2 left
+ searched 2026-08-30 for 6 -> 0 matches
+ what the business now knows, which the booking platform would have kept:
+   links   2026-08-25  party 2  2 matched  booked
+   links   2026-08-30  party 6  0 matched  did not book
+ the 6-person request on the 30th found nothing. that is a demand signal, and it 
+is theirs.
+THE SAME SECTION AS AN EMBED
+----------------------------
+ /embed/circle-boats/availability -> 0.8 kb fragment
+ same projection, dropped into the business's own website. one source, three 
+places.
