@@ -41,13 +41,61 @@ Derived from the imports and from `package.json`, not guessed:
 
 | Missing | Consequence |
 |---|---|
-| `src/db.js` | **Blocks everything.** 24 files import it. It is the `q` / `one` / `j` helper layer over `pg`, with `pg-mem` behind it when `DATABASE_URL` is unset. |
+| ~~`src/db.js`~~ | **Reconstructed** — see below. Every relative import now resolves. |
 | `demo.js`, `demo-device.js`, `demo-modular.js`, `demo-surfaces.js` | The four demos `STATUS.md` says all pass cannot be re-run to confirm it. |
 | 12 of 14 packages under `modules/` | `qr_menu`, `forms`, `crm`, `facebook`, `google_business`, `yelp`, `android_cloud`, `android_local_node`, `hosted_models`, `local_models`, `loop_harness`, `composer`. Only `availability` and `business_profile` survived. |
 
 `docs/STATUS.md` reports the original as 3,557 lines across 39 JS files. This
-recovery holds 28. The kernel itself is complete; the demos and most package
+recovery holds 29. The kernel itself is complete; the demos and most package
 implementations are not.
+
+## The one reconstructed file
+
+`src/db.js` was missing and 24 files import it, so nothing ran. It is now
+reconstructed rather than recovered, and the file says so in its own header.
+Its four signatures were not invented — each is fixed by its call sites:
+
+- `q(sql, params)` returns an array, because callers do `rows.length`,
+  `[...rows]`, `.map` and `.filter`, and nothing anywhere reads `.rows`.
+- `one(sql, params)` returns the first row or `null`, because callers do
+  `row?.value` and `if (!row)`.
+- `j(value)` parses a jsonb column that pg returns parsed and pg-mem returns
+  as text, and must pass `undefined` through unchanged so that
+  `j(row?.settings) ?? {}` still reaches its default.
+- `connect({ url, schemaDir })` applies the migrations in filename order,
+  which is why they are numbered.
+
+Behaviour beyond those four signatures is the minimum that makes them work.
+`pg-mem` backs it when `DATABASE_URL` is unset, so a fresh checkout runs with
+no database to set up; `gen_random_uuid()` is registered by hand there because
+pg-mem does not ship `pgcrypto`.
+
+## What is now verified by running it
+
+`npm install && npm run verify` — `verify.mjs` exercises the kernel with no
+packages involved beyond the one that survived:
+
+```
+1. db.connect + 4 migrations           OK
+2. tables created                      44
+3. packages loaded                     1  [availability]
+4. capabilities registered             9
+5. slots declared                      6  [workspace.executor, model, harness, builder, memory, sandbox]
+6. capabilities persisted to table     9
+7. business + person + membership      OK
+8. capability executed                 state=succeeded verification=verified
+9. receipt chain                       {"ok":true,"count":1}
+10. ungranted capability               refused: not permitted: business.set_hours
+```
+
+Line 8 is the claim that matters: the capability ran, and then its verifier
+re-read the fact and returned `verified` — not `unknown`, which is what the
+kernel gives anything that cannot prove itself. Line 9 is the hash chain
+holding. Line 10 is the policy gate denying a capability with no grant.
+
+`npm start` and the four demos still do not run: `demo*.js` are absent, and
+`boot()` fails at `defaults()` binding `android_cloud`, which is one of the 12
+absent packages. That failure is a missing module, not a broken kernel.
 
 ## Before trusting any claim in docs/
 

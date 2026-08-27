@@ -8,7 +8,8 @@
     "demo:device": "node demo-device.js",
     "demo:modular": "node demo-modular.js",
     "demo:surfaces": "node demo-surfaces.js",
-    "start": "node src/http/server.js"
+    "start": "node src/http/server.js",
+    "verify": "node verify.mjs"
   },
   "keywords": [],
   "author": "",
