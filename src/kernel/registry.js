@@ -6,6 +6,7 @@ import { q, one } from '../db.js';
 import { defineCapability, persistCapabilities } from './policy.js';
 import { validateProvider, persistSlots } from './providers.js';
 import { moduleFor } from './generated.js';
+import { provide } from './resources.js';
 const loaded = new Map(); // key -> { manifest, module }
 export function getPackage(key) { return loaded.get(key) ?? null; }
 export function listPackages() { return [...loaded.values()].map(p => p.manifest); }
@@ -29,6 +30,10 @@ export async function loadPackages(dir) {
       defineCapability({ ...cap, packageKey: manifest.key });
     }
     loaded.set(manifest.key, { manifest, module: mod, dir: base });
+    // Registered by id as well, so one package can reach another's capability
+    // or renderer through a string from a manifest instead of a path. The
+    // module is already in hand here, so this loader never re-imports.
+    provide(manifest.key, () => mod);
     const hash = crypto.createHash('sha256').update(raw).digest('hex');
     await one(
       `insert into package (key, version, kind, name, summary, manifest, source, content_hash)
@@ -111,5 +116,6 @@ export function registerGenerated(manifest) {
   const mod = manifest.schema ? moduleFor(manifest) : { capabilities: [], renderers: {} };
   for (const cap of mod.capabilities) defineCapability({ ...cap, packageKey: manifest.key });
   loaded.set(manifest.key, { manifest, module: mod, dir: null });
+  provide(manifest.key, () => mod);
   return mod;
 }
