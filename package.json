@@ -12,6 +12,7 @@
     "verify": "node verify.mjs",
     "test:device": "node tests/device-loop.mjs",
     "test:modularity": "node tests/modularity.mjs",
+    "test:define": "node tests/define.mjs",
     "test": "node tests/modularity.mjs && node tests/device-loop.mjs",
     "compose": "node scripts/compose.mjs"
   },
