@@ -1,0 +1,14 @@
+{
+  "key": "voice_openai",
+  "version": "1.0.0",
+  "kind": "provider",
+  "fills": "voice",
+  "name": "Voice — OpenAI Realtime",
+  "summary": "Takes a phone call or a microphone, turns what was said into one of the capabilities this business has, and answers out loud.",
+  "defaultPriority": 500,
+  "defaultConfig": {
+    "model": "gpt-4o-realtime-preview",
+    "voice": "alloy",
+    "transcribeModel": "whisper-1"
+  }
+}

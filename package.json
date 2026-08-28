@@ -14,6 +14,7 @@
     "test:modularity": "node tests/modularity.mjs",
     "test:define": "node tests/define.mjs",
     "test:resources": "node tests/resources.mjs",
+    "test:voice": "node tests/voice.mjs",
     "test": "node tests/modularity.mjs && node tests/device-loop.mjs",
     "compose": "node scripts/compose.mjs"
   },

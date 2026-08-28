@@ -119,6 +119,19 @@ defineSlot({
   contract: { exports: ['models', 'complete'] },
   multiple: true,
 });
+// Speech in, an intent out, speech back.
+//
+// Kept deliberately narrow. A voice provider transcribes, resolves a transcript
+// against the capabilities it is handed, and speaks a reply. It does not decide
+// what a business can do — `intent` receives the allowed capability list and may
+// only choose from it, so a package installed this afternoon is reachable by
+// voice this afternoon, and one the caller has no grant for is not reachable at
+// all.
+defineSlot({
+  key: 'voice',
+  summary: 'Turns speech into an intent against the capabilities on offer, and speaks the reply.',
+  contract: { exports: ['transcribe', 'intent', 'speak'], optional: ['openSession', 'closeSession'] },
+});
 defineSlot({
   key: 'harness',
   summary: 'Runs an agent loop, choosing capabilities until a goal is met.',
