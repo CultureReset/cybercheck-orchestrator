@@ -1,7 +1,7 @@
 import express from 'express';
 import { boot, contextFor } from '../platform.js';
 import * as db from '../db.js';
-import { listPackages } from '../kernel/registry.js';
+import { listPackages, getPackage } from '../kernel/registry.js';
 import { install, uninstall } from '../kernel/installer.js';
 import { request, decide } from '../kernel/executor.js';
 import { listCapabilities } from '../kernel/policy.js';
@@ -198,14 +198,32 @@ app.get('/embed/:slug/:section', async (req, res) => {
   if (!html) return res.status(404).send('not found');
   res.type('html').send(html);
 });
-// Public, unauthenticated, and still recorded: the search happens on the
+// Public, unauthenticated, and still recorded: the action happens on the
 // business's own page, so the business keeps it.
-app.post('/public/:slug/availability/search', async (req, res) => {
-  const business = await db.one(`select * from business where slug = $1`, [req.params.slug]);
+//
+// This route names no package. A capability is reachable here only if its own
+// manifest lists it in `publicActions` AND the business has that package
+// installed — two declarations, neither of them the kernel's. Nothing is
+// public by default, and adding a public action is a manifest edit.
+app.post('/public/:slug/:packageKey/:verb', async (req, res) => {
+  const { slug, packageKey, verb } = req.params;
+  const business = await db.one(`select * from business where slug = $1`, [slug]);
   if (!business) return res.status(404).json({ error: 'not found' });
+
+  const pkg = getPackage(packageKey);
+  const capability = `${packageKey}.${verb}`;
+  if (!pkg?.manifest.publicActions?.includes(capability)) {
+    return res.status(404).json({ error: 'not found' });
+  }
+  const installed = await db.q(
+    `select 1 from install where business_id = $1 and package_key = $2 and status = 'active'`,
+    [business.id, packageKey]
+  );
+  if (installed.length === 0) return res.status(404).json({ error: 'not found' });
+
   const ctx = { businessId: business.id, business, person: null,
                 membership: { id: null, role: 'system' }, system: true };
-  const out = await request({ ctx, capability: 'availability.search',
+  const out = await request({ ctx, capability,
     input: { ...req.body, surface: req.body.surface ?? 'links' } });
   res.json(out.result ?? { error: out.error });
 });

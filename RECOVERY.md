@@ -135,6 +135,41 @@ actually installed, and skips a slot whose candidates are all missing. It also
 leaves a slot alone once anything is bound, instead of re-binding its own default
 over an operator's choice on every restart.
 
+### The kernel stopped naming packages
+
+The first pass at the above put the fix in the wrong place: `defaults()` grew a
+hardcoded list of six package names and a special case for the `model` slot,
+three lines below the comment in `providers.js` that says *the kernel declares
+the slots, packages fill them, nothing here names a vendor*. That is the same
+bug as the one it was fixing, written more neatly.
+
+`defaults()` now iterates the slots the kernel declares and asks the installed
+packages which of them volunteer:
+
+    "kind": "provider",
+    "fills": "workspace.executor",
+    "defaultPriority": 900
+
+Lower wins. Declaring nothing means never bound automatically, which is how a
+real device stays an explicit per-business choice. `defaultConfig` replaces the
+`model`-slot special case. Both fields are validated at load in `registry.js`.
+
+Two older instances of the same violation went with it:
+
+- `workspace.js` imported `deviceFor` from `src/drivers/android.js` and called
+  one specific executor directly, in `provision()` and `installOnDevice()`.
+  Both now go through the bound provider. `installApp` is declared `optional`
+  on the slot contract, because a simulator can conjure an app onto a device
+  and a phone in someone's hand cannot.
+- `server.js` had a hardcoded `POST /public/:slug/availability/search`. The
+  route is now generic and reaches a capability only when the package's own
+  manifest lists it in `publicActions` *and* the business has that package
+  installed. Nothing is public by default, and the old URL still resolves.
+
+`npm run test:modularity` keeps it that way: it fails if a package name appears
+in any of the eleven deciding files, and it boots the kernel against an empty
+modules directory to prove it still starts with nothing installed.
+
 ### `workspace.executor` has two providers again
 
 | Package | What it is |

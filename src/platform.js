@@ -8,9 +8,11 @@ import { installFanOut } from './kernel/fanout.js';
 import { bind } from './kernel/providers.js';
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(here, '..');
-export async function boot({ url } = {}) {
+// `modulesDir` exists so a test can boot the kernel with no packages at all
+// and prove it still starts. Nothing in production passes it.
+export async function boot({ url, modulesDir } = {}) {
   await db.connect({ url, schemaDir: path.join(ROOT, 'db') });
-  const packages = await loadPackages(path.join(ROOT, 'modules'));
+  const packages = await loadPackages(modulesDir ?? path.join(ROOT, 'modules'));
   installFanOut();
   const bindings = await defaults();
   return { packages, bindings };
@@ -28,41 +30,41 @@ export async function contextFor({ personId, businessSlug }) {
 }
 // Platform defaults. A business overrides any of these with one row.
 //
-// Each slot names its candidates in preference order and the first one actually
-// installed wins. Two rules matter here:
+// This function names no package, no vendor and no slot, and it must not start
+// doing so. A provider that is willing to be a platform default says so in its
+// own manifest — `defaultPriority`, lower wins, with an optional
+// `defaultConfig`. A provider that declares neither is never bound
+// automatically, which is how hardware stays an explicit, per-business choice.
 //
-//   A default naming an absent package is skipped, not fatal. A kernel that
+// Two rules follow from that:
+//
+//   A slot with no willing candidate is skipped, not fatal. A kernel that
 //   refuses to start because an optional provider is missing is not a modular
 //   kernel, and every package above this line is meant to be removable.
 //
-//   A default only applies when the slot is empty. Once anything is bound —
-//   by an operator, by a demo, by a business — boot leaves it alone rather
-//   than stomping the choice on every restart.
+//   A slot that already has a binding is left alone. Once anything is bound —
+//   by an operator, by a demo, by a business — boot does not stomp the choice
+//   on the next restart.
 async function defaults() {
-  const { bind: bindSlot } = await import('./kernel/providers.js');
-  const { getPackage } = await import('./kernel/registry.js');
+  const { bind: bindSlot, listSlots } = await import('./kernel/providers.js');
+  const { listPackages } = await import('./kernel/registry.js');
   const { q } = await import('./db.js');
-  const preferences = [
-    // The platform default is the executor that needs no hardware. A real
-    // device is a per-business binding, because a business's phone holds that
-    // business's logged-in accounts and is never shared.
-    ['workspace.executor', ['android_cloud', 'android_simulator']],
-    ['builder', ['composer']],
-    ['harness', ['loop_harness']],
-    ['model', ['hosted_models']],
-  ];
   const bound = [];
-  for (const [slot, candidates] of preferences) {
+  for (const slot of listSlots()) {
     const existing = await q(
       `select 1 from provider_binding where slot_key = $1 and business_id is null and active = true`,
-      [slot]
+      [slot.key]
     );
     if (existing.length > 0) continue;
-    const packageKey = candidates.find(key => getPackage(key));
-    if (!packageKey) continue;
-    await bindSlot({ businessId: null, slot, packageKey,
-                     config: slot === 'model' ? { simulate: true } : {} });
-    bound.push({ slot, packageKey });
+    const [candidate] = listPackages()
+      .filter(m => m.kind === 'provider'
+                && m.fills === slot.key
+                && Number.isFinite(m.defaultPriority))
+      .sort((a, b) => a.defaultPriority - b.defaultPriority);
+    if (!candidate) continue;
+    await bindSlot({ businessId: null, slot: slot.key, packageKey: candidate.key,
+                     config: candidate.defaultConfig ?? {} });
+    bound.push({ slot: slot.key, packageKey: candidate.key });
   }
   return bound;
 }

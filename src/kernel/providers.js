@@ -28,6 +28,14 @@ export function validateProvider(manifest, mod) {
       throw new Error(`${manifest.key} fills ${slot.key} but does not export ${fn}()`);
     }
   }
+  // A slot may also name things a provider is allowed to offer but need not.
+  // The kernel calls these only where absence is a real answer — a simulator
+  // can conjure an app onto a device; a phone in someone's hand cannot.
+  for (const fn of slot.contract.optional ?? []) {
+    if (mod[fn] !== undefined && typeof mod[fn] !== 'function') {
+      throw new Error(`${manifest.key} exports ${fn} for ${slot.key}, but it is not a function`);
+    }
+  }
   return slot;
 }
 // Swapping a provider is one row. No redeploy, no rebuild of anything above.
@@ -103,7 +111,7 @@ export async function bindings(businessId = null) {
 defineSlot({
   key: 'workspace.executor',
   summary: 'Runs appmap steps against a device or environment.',
-  contract: { exports: ['run', 'screenshot', 'prepare'] },
+  contract: { exports: ['run', 'screenshot', 'prepare'], optional: ['installApp'] },
 });
 defineSlot({
   key: 'model',

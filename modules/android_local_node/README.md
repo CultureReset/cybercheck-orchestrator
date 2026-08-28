@@ -28,8 +28,12 @@ verified | drifted         and a receipt either way
 ```bash
 adb devices                       # get the serial
 export ANDROID_SERIAL=<serial>
-docker compose --profile usb -f docker/docker-compose.yml up
+docker compose --profile usb -f modules/android_local_node/docker/docker-compose.yml up
 ```
+
+The container spec lives in this package, not at the repo root. The platform
+does not require ADB; this one executor does. Delete the package and the
+container goes with it.
 
 For an emulator or a phone over wifi, use `--profile tcp`; any device value
 containing `:` is treated as a TCP target and connected on demand.
@@ -89,6 +93,17 @@ The same six the Simulator speaks:
 { expect: "Saved" }                 // fails the run if absent
 { wait: 500 }
 ```
+
+## What this package deliberately does not export
+
+`installApp`. It is `optional` on the `workspace.executor` contract, and the
+simulator provides it. On real hardware the owner installs the app and signs
+in themselves — their credential never passes through the platform — and
+`installOnDevice()` records that the app is expected to be there rather than
+pretending to put it there.
+
+This package also declares no `defaultPriority`, so it is never bound
+automatically. A real device is always an explicit choice.
 
 ## Known limits
 

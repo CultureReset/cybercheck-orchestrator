@@ -1,7 +1,11 @@
+# The container this module needs. It lives with the module, not at the repo
+# root: the platform does not require ADB, this one executor does. Delete the
+# package and the container spec goes with it.
+#
 # Two ways to attach a device. Pick one; the module is the same either way.
 #
-#   docker compose --profile usb up      a real phone on the host's USB bus
-#   docker compose --profile tcp up      an emulator, or a phone over wifi
+#   docker compose --profile usb -f modules/android_local_node/docker/docker-compose.yml up
+#   docker compose --profile tcp -f modules/android_local_node/docker/docker-compose.yml up
 #
 # The tenant rule this file exists to keep: one workspace, one device. If a
 # second business needs a device, it gets its own entry in GHOST_ADB_DEVICES,
@@ -12,8 +16,8 @@ services:
   node-usb:
     profiles: ["usb"]
     build:
-      context: ..
-      dockerfile: docker/Dockerfile
+      context: ../../..
+      dockerfile: modules/android_local_node/docker/Dockerfile
     # USB passthrough. The device node moves when the phone re-enumerates, so
     # the whole bus is mounted rather than one path.
     volumes:
@@ -33,8 +37,8 @@ services:
   node-tcp:
     profiles: ["tcp"]
     build:
-      context: ..
-      dockerfile: docker/Dockerfile
+      context: ../../..
+      dockerfile: modules/android_local_node/docker/Dockerfile
     volumes:
       - adb-keys:/root/.android
     environment:

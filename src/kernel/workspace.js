@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { q, one } from '../db.js';
 import { getPackage } from './registry.js';
-import { deviceFor } from '../drivers/android.js';
+import { resolve } from './providers.js';
 import { emit } from './events.js';
 // One workspace per business. The Android instance and the container sit on
 // the same host and are separate workloads; the container holds the private
@@ -19,7 +19,14 @@ export async function provision({ businessId, region = 'us-east' }) {
      values ($1,'container',$2,'ready',$3, now()) returning *`,
     [businessId, region, `vol-${businessId.slice(0, 8)}-svc`]
   );
-  deviceFor(android.id);
+  // Whatever executor is bound gets a chance to ready itself. A simulator makes
+  // a device; a real node checks the cable. Provisioning is a record, though,
+  // so an unplugged phone must not stop a workspace from existing — readiness is
+  // the run's problem, and run() prepares again before every step list.
+  const executor = await resolve({ slot: 'workspace.executor', businessId });
+  if (executor?.module.prepare) {
+    await executor.module.prepare({ workspace: android }).catch(() => {});
+  }
   await emit({ businessId, topic: 'workspace.provisioned', payload: { workspaceId: android.id } });
   return android;
 }
@@ -42,9 +49,16 @@ export async function installOnDevice({ businessId, packageKey, accountLabel, in
        carries = excluded.carries returning *`,
     [m.key, m.version, m.androidPackage, JSON.stringify(m.carries ?? []), JSON.stringify(m.routes ?? {})]
   );
-  const device = deviceFor(ws.id);
-  device.installApp(m.androidPackage, initialScreen);
-  device.login(m.androidPackage, accountLabel);
+  // Putting the app on the device belongs to the executor, not to the kernel.
+  // A simulator can conjure one and sign it in. A phone in the owner's hand
+  // cannot: they install it and log in themselves, and the row below records
+  // that we expect it to be there.
+  const executor = await resolve({ slot: 'workspace.executor', businessId });
+  if (executor?.module.installApp) {
+    await executor.module.installApp({
+      workspace: ws, androidPackage: m.androidPackage, accountLabel, initialScreen,
+    });
+  }
   const row = await one(
     `insert into device_app (workspace_id, business_id, package_key, android_package, account_label, logged_in, last_seen)
      values ($1,$2,$3,$4,$5,true, now())
@@ -98,7 +112,6 @@ export async function closeSession({ businessId, sessionId }) {
 }
 export async function screenshot(businessId) {
   const ws = await androidWorkspace(businessId);
-  const { resolve } = await import('./providers.js');
   const executor = await resolve({ slot: 'workspace.executor', businessId });
   if (!executor) throw new Error('no workspace executor bound');
   return executor.module.screenshot({ workspace: ws });

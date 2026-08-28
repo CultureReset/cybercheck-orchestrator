@@ -51,6 +51,16 @@ function validate(m) {
   const kinds = ['app', 'plugin', 'connector', 'channel_app', 'provider', 'automation', 'harness', 'builder', 'model', 'memory', 'industry_pack'];
   if (!kinds.includes(m.kind)) throw new Error(`unknown package kind: ${m.kind}`);
   if (m.kind === 'provider' && !m.fills) throw new Error(`${m.key} is a provider that fills no slot`);
+  // A provider volunteers to be a platform default here, rather than the kernel
+  // keeping a list of package names. Lower priority wins; declaring nothing
+  // means never bound automatically.
+  if (m.defaultPriority !== undefined) {
+    if (m.kind !== 'provider') throw new Error(`${m.key} declares defaultPriority but is not a provider`);
+    if (!Number.isFinite(m.defaultPriority)) throw new Error(`${m.key} has a non-numeric defaultPriority`);
+  }
+  if (m.defaultConfig !== undefined && m.defaultPriority === undefined) {
+    throw new Error(`${m.key} declares defaultConfig but never volunteers as a default`);
+  }
   if (m.kind === 'channel_app') {
     if (!m.androidPackage) throw new Error(`${m.key} is a channel app with no androidPackage`);
     for (const [key, route] of Object.entries(m.routes ?? {})) {
@@ -63,6 +73,17 @@ function validate(m) {
   for (const cap of m.capabilities ?? []) {
     if (!cap.startsWith(m.key + '.')) {
       throw new Error(`${m.key} declares capability outside its namespace: ${cap}`);
+    }
+  }
+  // Reachable unauthenticated from the public page. Same namespace rule, and it
+  // must be a capability the package actually declares — a package cannot open
+  // a hole onto someone else's verb.
+  for (const cap of m.publicActions ?? []) {
+    if (!cap.startsWith(m.key + '.')) {
+      throw new Error(`${m.key} declares a public action outside its namespace: ${cap}`);
+    }
+    if (!(m.capabilities ?? []).includes(cap)) {
+      throw new Error(`${m.key} makes "${cap}" public but never declares it`);
     }
   }
   for (const [name, def] of Object.entries(m.schema ?? {})) {
