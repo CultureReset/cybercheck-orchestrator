@@ -28,12 +28,17 @@ verified | drifted         and a receipt either way
 ```bash
 adb devices                       # get the serial
 export ANDROID_SERIAL=<serial>
-docker compose --profile usb -f modules/android_local_node/docker/docker-compose.yml up
+npm run compose                   # build the stack from what packages declare
+docker compose -f docker-compose.generated.yml --profile usb up
 ```
 
-The container spec lives in this package, not at the repo root. The platform
-does not require ADB; this one executor does. Delete the package and the
-container goes with it.
+The container spec lives in this package, not at the repo root: `manifest.json`
+declares `runtime.compose`, and `docker/service.json` beside it says what the
+service needs. `npm run compose` merges the kernel's fragment with every
+package's and writes `docker-compose.generated.yml`.
+
+Delete this package and its two services leave the stack. Nothing in the
+generator names it.
 
 For an emulator or a phone over wifi, use `--profile tcp`; any device value
 containing `:` is treated as a TCP target and connected on demand.

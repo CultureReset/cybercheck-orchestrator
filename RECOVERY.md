@@ -205,3 +205,31 @@ screen evidence instead of reporting success. Five checks, no hardware.
 
 The ADB module's own ADB calls remain untested — there is no phone attached to
 CI.
+
+### The container stack is generated too
+
+A hand-written `docker-compose.yml` listing every service is the same mistake
+as a hardcoded package list in the kernel: it makes a removable thing required
+and goes stale the moment a package is added or deleted.
+
+So the stack is assembled the same way everything else here is. The kernel
+ships `docker/service.json`. A package that needs a container declares
+`"runtime": { "compose": "docker/service.json" }` in its manifest and ships the
+fragment beside it. `npm run compose` merges whatever it finds and writes
+`docker-compose.generated.yml`, which is gitignored because it is derived.
+
+Fragments are JSON so the generator needs no YAML dependency; the output is
+real YAML and `docker compose config` accepts it. Build contexts are written
+relative to the fragment and rebased to the repo root by the generator, so a
+package never has to know where the output lands. Two packages declaring the
+same service name is an error, not a silent overwrite.
+
+Verified by deleting `modules/android_local_node` and regenerating: both
+android services disappear from the stack and `verify.mjs` still passes.
+
+### What the containers are and are not
+
+Docker belongs in the execution layer. It runs work; it never holds canonical
+business data. Per-module databases would rebuild exactly the silos this
+architecture exists to prevent, so the stack has one Postgres shared by the
+kernel and every executor that needs it — the container is not the database.

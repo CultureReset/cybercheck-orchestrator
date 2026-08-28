@@ -1,0 +1,30 @@
+{
+  "_comment": "This package's compose fragment. scripts/compose.mjs merges it with the kernel's and every other package's. Delete the package and its services leave the stack with it.",
+  "services": {
+    "android-node-usb": {
+      "profiles": ["usb"],
+      "build": { "context": "../../..", "dockerfile": "modules/android_local_node/docker/Dockerfile" },
+      "volumes": ["/dev/bus/usb:/dev/bus/usb", "adb-keys:/root/.android"],
+      "device_cgroup_rules": ["c 189:* rmw"],
+      "environment": {
+        "ANDROID_SERIAL": "${ANDROID_SERIAL:-}",
+        "GHOST_ADB_SETTLE_MS": "${GHOST_ADB_SETTLE_MS:-350}",
+        "DATABASE_URL": "postgres://ghost:ghost@db:5432/ghost"
+      },
+      "depends_on": ["db"]
+    },
+    "android-node-tcp": {
+      "profiles": ["tcp"],
+      "build": { "context": "../../..", "dockerfile": "modules/android_local_node/docker/Dockerfile" },
+      "volumes": ["adb-keys:/root/.android"],
+      "environment": {
+        "ANDROID_SERIAL": "${ANDROID_SERIAL:-host.docker.internal:5555}",
+        "GHOST_ADB_DEVICES": "${GHOST_ADB_DEVICES:-}",
+        "DATABASE_URL": "postgres://ghost:ghost@db:5432/ghost"
+      },
+      "extra_hosts": ["host.docker.internal:host-gateway"],
+      "depends_on": ["db"]
+    }
+  },
+  "volumes": { "adb-keys": null }
+}

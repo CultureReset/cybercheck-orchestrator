@@ -86,6 +86,17 @@ function validate(m) {
       throw new Error(`${m.key} makes "${cap}" public but never declares it`);
     }
   }
+  // A package that needs a container declares where its compose fragment is.
+  // The kernel never reads it — scripts/compose.mjs does — but the shape is
+  // checked here so a typo fails at load rather than at deploy.
+  if (m.runtime !== undefined) {
+    if (typeof m.runtime !== 'object' || m.runtime === null) {
+      throw new Error(`${m.key} has a non-object runtime declaration`);
+    }
+    if (m.runtime.compose !== undefined && typeof m.runtime.compose !== 'string') {
+      throw new Error(`${m.key} declares a non-string runtime.compose`);
+    }
+  }
   for (const [name, def] of Object.entries(m.schema ?? {})) {
     if (!/^[a-z0-9_]+$/.test(name)) throw new Error(`bad table name: ${name}`);
     if (!def.fields) throw new Error(`table ${name} declares no fields`);

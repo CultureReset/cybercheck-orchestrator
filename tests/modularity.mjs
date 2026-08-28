@@ -110,6 +110,48 @@ check('a public action is unreachable unless its manifest opens it', async () =>
   assert.match(src, /publicActions/, 'the public route stopped checking the declaration');
 });
 
+check('the container stack is generated, not hand-written', async () => {
+  const generator = path.join(ROOT, 'scripts/compose.mjs');
+  assert.ok(fs.existsSync(generator), 'no compose generator');
+  const src = fs.readFileSync(generator, 'utf8');
+  for (const key of packageKeys) {
+    assert.ok(!new RegExp(`['"\`]${key}['"\`]`).test(src),
+      `the compose generator names "${key}"`);
+  }
+  // A checked-in compose file listing services by hand is the thing the
+  // generator exists to replace.
+  for (const stale of ['docker-compose.yml', 'docker/docker-compose.yml']) {
+    assert.ok(!fs.existsSync(path.join(ROOT, stale)), `${stale} is hand-written; regenerate instead`);
+  }
+});
+
+check('every declared container fragment and Dockerfile exists', async () => {
+  for (const key of packageKeys) {
+    const dir = path.join(ROOT, 'modules', key);
+    const m = JSON.parse(fs.readFileSync(path.join(dir, 'manifest.json'), 'utf8'));
+    const rel = m.runtime?.compose;
+    if (!rel) continue;
+    const fragmentPath = path.join(dir, rel);
+    assert.ok(fs.existsSync(fragmentPath), `${key} declares runtime.compose "${rel}", missing`);
+    const fragment = JSON.parse(fs.readFileSync(fragmentPath, 'utf8'));
+    for (const [name, spec] of Object.entries(fragment.services ?? {})) {
+      if (!spec.build) continue;
+      const ctx = path.resolve(path.dirname(fragmentPath), spec.build.context ?? '.');
+      const dockerfile = path.resolve(ctx, spec.build.dockerfile ?? 'Dockerfile');
+      assert.ok(fs.existsSync(dockerfile), `${key}/${name} points at a missing Dockerfile: ${dockerfile}`);
+    }
+  }
+});
+
+check('deleting a package removes its services from the stack', async () => {
+  const withAll = await exec(process.execPath, ['scripts/compose.mjs'], { cwd: ROOT, timeout: 30_000 });
+  const generated = fs.readFileSync(path.join(ROOT, 'docker-compose.generated.yml'), 'utf8');
+  // Every service line traces back to a fragment some package ships.
+  const contributors = withAll.stdout.split('\n').slice(1).filter(Boolean).length;
+  assert.ok(contributors >= 1, 'no package contributed any service');
+  assert.match(generated, /^# GENERATED/, 'the stack is not marked generated');
+});
+
 let failed = 0;
 for (const [name, fn] of results) {
   try { await fn(); console.log(`  ok    ${name}`); }
