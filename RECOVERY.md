@@ -111,3 +111,62 @@ This code uses singular table names — `install`, `execution`, `package`,
 that specifies the product uses plural names and splits several of these, and
 an API shaped `/v1/businesses/{business_id}/…`. Reconciling the two is the
 next decision, and it is cheaper now than it will ever be again.
+
+---
+
+## Restored since the recovery
+
+The recovery left the kernel complete and the packages gone. Three of the
+missing pieces have been rebuilt, and the difference between *recovered* and
+*rebuilt* still matters — none of the below is the original code.
+
+### The platform could not start
+
+`src/platform.js` bound four platform defaults by name, and all four packages
+were among the twelve lost. `bind()` throws on an unknown package, so `boot()`
+failed on the first one:
+
+    BOOT FAILED: no such package: android_cloud
+
+That was a modularity bug as much as a recovery gap: a kernel that refuses to
+start because an optional provider is absent is not a modular kernel. `defaults()`
+now names candidates in preference order per slot, binds the first that is
+actually installed, and skips a slot whose candidates are all missing. It also
+leaves a slot alone once anything is bound, instead of re-binding its own default
+over an operator's choice on every restart.
+
+### `workspace.executor` has two providers again
+
+| Package | What it is |
+|---|---|
+| `android_simulator` | Wraps the surviving `Simulator` in `src/drivers/android.js`. Needs no hardware. The platform default. |
+| `android_local_node` | Real ADB against a phone or emulator, in a container. A per-business binding. |
+
+Neither is the lost `android_cloud` or the lost `android_local_node`; both are
+new code written against the slot contract the kernel already declared
+(`run`, `screenshot`, `prepare`). If the originals ever resurface, compare
+rather than assume.
+
+### `modules/business_profile/manifest.json` is reconstructed
+
+`index.js` survived; its manifest did not, so the package never loaded and
+`availability` — which `requires` it — could not install. The manifest is
+derived from the code, not invented:
+
+- `key` from the directory and the `business_profile.` capability namespace
+- `capabilities` from the one entry in the exported `capabilities` array
+- `public` sections from the three keys of the exported `renderers`
+
+Titles, icons and sort order have no source in the code and were chosen. They
+are presentation only; nothing depends on them.
+
+### What now proves it runs
+
+`npm run test:device` — the four original demos are still lost, so this replaces
+their coverage of the device path: push a canonical value onto the device, read
+it back off the screen, confirm the observation and sync state, then rename a
+field on the app and confirm the same push fails into the repair queue with
+screen evidence instead of reporting success. Five checks, no hardware.
+
+The ADB module's own ADB calls remain untested — there is no phone attached to
+CI.

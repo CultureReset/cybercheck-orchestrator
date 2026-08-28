@@ -1,0 +1,55 @@
+# Two ways to attach a device. Pick one; the module is the same either way.
+#
+#   docker compose --profile usb up      a real phone on the host's USB bus
+#   docker compose --profile tcp up      an emulator, or a phone over wifi
+#
+# The tenant rule this file exists to keep: one workspace, one device. If a
+# second business needs a device, it gets its own entry in GHOST_ADB_DEVICES,
+# not a share of this one. A logged-in app is a credential.
+
+services:
+  # A phone on the end of a cable.
+  node-usb:
+    profiles: ["usb"]
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    # USB passthrough. The device node moves when the phone re-enumerates, so
+    # the whole bus is mounted rather than one path.
+    volumes:
+      - /dev/bus/usb:/dev/bus/usb
+      - adb-keys:/root/.android
+    device_cgroup_rules:
+      - 'c 189:* rmw'
+    environment:
+      # One device on the bus: name it once and every workspace uses it.
+      ANDROID_SERIAL: "${ANDROID_SERIAL:?set ANDROID_SERIAL to the serial from 'adb devices'}"
+      DATABASE_URL: "${DATABASE_URL:-}"
+      GHOST_ADB_SETTLE_MS: "${GHOST_ADB_SETTLE_MS:-350}"
+    ports:
+      - "3000:3000"
+
+  # An emulator, a phone over wifi, or a cloud Android instance.
+  node-tcp:
+    profiles: ["tcp"]
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    volumes:
+      - adb-keys:/root/.android
+    environment:
+      # host:port values are connected on demand. Map workspaces to devices
+      # here once more than one business has hardware:
+      #   GHOST_ADB_DEVICES='{"<workspaceId>":"10.0.0.42:5555"}'
+      ANDROID_SERIAL: "${ANDROID_SERIAL:-host.docker.internal:5555}"
+      GHOST_ADB_DEVICES: "${GHOST_ADB_DEVICES:-}"
+      DATABASE_URL: "${DATABASE_URL:-}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "3000:3000"
+
+volumes:
+  # ADB's keypair. Without this the phone asks the owner to re-authorise USB
+  # debugging every time the container is rebuilt.
+  adb-keys:

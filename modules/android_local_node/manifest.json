@@ -1,0 +1,8 @@
+{
+  "key": "android_local_node",
+  "version": "1.0.0",
+  "kind": "provider",
+  "fills": "workspace.executor",
+  "name": "Local Android Node",
+  "summary": "Drives a real Android device or emulator over ADB from a container on the same host. One workspace, one device, one tenant."
+}

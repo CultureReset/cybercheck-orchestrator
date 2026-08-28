@@ -9,7 +9,8 @@
     "demo:modular": "node demo-modular.js",
     "demo:surfaces": "node demo-surfaces.js",
     "start": "node src/http/server.js",
-    "verify": "node verify.mjs"
+    "verify": "node verify.mjs",
+    "test:device": "node tests/device-loop.mjs"
   },
   "keywords": [],
   "author": "",

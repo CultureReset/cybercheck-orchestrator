@@ -1,0 +1,13 @@
+{
+  "key": "business_profile",
+  "version": "1.0.0",
+  "kind": "app",
+  "name": "Business Profile",
+  "summary": "The base profile every business starts with: who they are, when they are open, how to reach them.",
+  "capabilities": ["business_profile.update_contact"],
+  "public": [
+    { "key": "about",   "title": "About",   "icon": "info",    "order": 10, "renderer": "about" },
+    { "key": "hours",   "title": "Hours",   "icon": "clock",   "order": 15, "renderer": "hours" },
+    { "key": "contact", "title": "Contact", "icon": "phone",   "order": 20, "renderer": "contact" }
+  ]
+}

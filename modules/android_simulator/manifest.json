@@ -1,0 +1,8 @@
+{
+  "key": "android_simulator",
+  "version": "1.0.0",
+  "kind": "provider",
+  "fills": "workspace.executor",
+  "name": "Android Simulator",
+  "summary": "In-process fake device. Runs appmap steps with no hardware, so the safety loop is testable on any machine."
+}
