@@ -52,6 +52,10 @@ defineCapability({
   packageKey: 'kernel',
   summary: 'Replace the weekly hours for a location.',
   route: 'internal',
+  // What fan-out reads to decide which installed apps carry this value. The
+  // kernel used to hold this mapping; it belongs to the capability, so a
+  // package can propagate a value the kernel has never heard of.
+  canonicalKey: 'hours',
   handler: async ({ ctx, input }) => {
     const { locationId = null, days } = input; // days: [{weekday, opens, closes, closed}]
     await q(`delete from regular_hours where business_id = $1 and (location_id = $2 or ($2 is null and location_id is null))`,
@@ -86,6 +90,7 @@ defineCapability({
   summary: 'Close or alter hours for a bounded window without touching regular hours.',
   route: 'internal',
   sensitivity: 'high',
+  canonicalKey: 'hours',
   handler: async ({ ctx, input }) => {
     const row = await one(
       `insert into temporary_hours (business_id, location_id, starts_at, ends_at, opens, closes, closed, reason)

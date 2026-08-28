@@ -153,6 +153,60 @@ check('deleting a package removes its services from the stack', async () => {
 });
 
 let failed = 0;
+/* ── fan-out asks the capability, it does not keep a list ─────────────────
+ *
+ * This was two lines in fanout.js mapping capability name to canonical key,
+ * which meant hours propagated to every installed app and nothing else did.
+ * A package could declare a route, carry a value, install cleanly, and still
+ * watch its own writes reach nobody — because the kernel had never heard of
+ * its key. That is the same failure as a hardcoded provider list, one layer up.
+ */
+check('fan-out keeps no capability-to-key table', async () => {
+  const src = fs.readFileSync(new URL('../src/kernel/fanout.js', import.meta.url), 'utf8');
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+
+  // The thing that must not come back: a literal mapping one capability name to
+  // one canonical key. `channel.push` may still appear — that is the kernel's
+  // own transport verb, the mechanism fan-out drives, not a decision about
+  // whose value is worth propagating.
+  const mapping = code.match(/['"][a-z_]+\.[a-z_]+['"]\s*:\s*['"][a-z_.]+['"]/g);
+  if (mapping) throw new Error(`fanout.js maps capability to key: ${mapping[0]}`);
+  if (/KEY_OF/.test(code)) throw new Error('fanout.js still keeps a capability -> key table');
+
+  // And no canonical key of its own. `hours` living here is what made hours the
+  // only value the platform could propagate.
+  const cap = fs.readFileSync(new URL('../src/kernel/canonical.js', import.meta.url), 'utf8');
+  for (const declared of cap.match(/canonicalKey:\s*'([a-z_]+)'/g) ?? []) {
+    const key = declared.split("'")[1];
+    if (new RegExp(`['"]${key}['"]`).test(code)) {
+      throw new Error(`fanout.js names the canonical key "${key}"`);
+    }
+  }
+});
+
+check('a capability the kernel never heard of propagates its own value', async () => {
+  const { compile } = await import('../src/define/compile.js');
+  const { definePackage, defineLogicFunction } = await import('../src/define/index.js');
+  const manifest = compile({
+    package: definePackage({
+      key: 'invented_here', version: '1.0.0', name: 'Invented',
+      summary: 'A package written after the kernel shipped.',
+    }),
+    functions: [defineLogicFunction({
+      universalIdentifier: '7a8b9c0d-1e2f-4a3b-8c4d-5e6f7a8b9c0d',
+      name: 'set_dress_code', summary: 'Set the dress code.',
+      canonicalKey: 'dress_code',
+    })],
+  });
+  const { registerGenerated } = await import('../src/kernel/registry.js');
+  registerGenerated(manifest);
+  const { keyOfForTest } = await import('../src/kernel/fanout.js');
+  const key = keyOfForTest('invented_here.set_dress_code');
+  if (key !== 'dress_code') {
+    throw new Error(`expected the package's own key back, got ${key}`);
+  }
+});
+
 for (const [name, fn] of results) {
   try { await fn(); console.log(`  ok    ${name}`); }
   catch (e) { failed++; console.log(`  FAIL  ${name}\n        ${e.message}`); }
