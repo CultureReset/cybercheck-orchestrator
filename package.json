@@ -9,12 +9,18 @@
     "demo:modular": "node demo-modular.js",
     "demo:surfaces": "node demo-surfaces.js",
     "start": "node src/http/server.js",
-    "verify": "node verify.mjs"
+    "verify": "node verify.mjs",
+    "platform": "node platform/src/http/server.js",
+    "platform:test": "node platform/test/run.mjs",
+    "platform:demo": "node platform/bin/demo.mjs",
+    "sync:contract": "node platform/bin/sync-contract.mjs"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
     "express": "^5.2.1",
     "pg": "^8.23.0",
     "pg-mem": "^3.0.14"

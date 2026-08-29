@@ -1,0 +1,50 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Request queue</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; margin: 0; padding: 16px; color: #111; }
+  h2 { margin: 0 0 14px; font-size: 15px; letter-spacing: .08em; text-transform: uppercase; opacity: .6; }
+  li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #eee; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  .song { font-weight: 600; }
+  .by { opacity: .6; font-size: 13px; }
+  button { font: inherit; margin-left: auto; border: 1px solid #ccc; background: #fff; border-radius: 8px; padding: 6px 12px; }
+  .done .song { text-decoration: line-through; opacity: .5; }
+  .empty { opacity: .6; }
+</style>
+
+<h2>Request queue</h2>
+<ul id="queue"></ul>
+<p id="empty" class="empty" hidden>Nothing requested yet.</p>
+
+<script type="module">
+  // The SDK is served by the platform, and the platform tells the frame where
+  // it lives. An app never hard-codes a platform address.
+  const platform = new URLSearchParams(location.search).get('cc_platform');
+  const { connect } = await import(`${platform}/sdk/app.js`);
+  const cc = await connect({ platform });
+  const queue = document.getElementById('queue');
+
+  async function draw() {
+    const rows = await cc.table('requests').list({ order: 'created_at desc', limit: 50 });
+    document.getElementById('empty').hidden = rows.length > 0;
+    queue.replaceChildren(...rows.map(row => {
+      const item = document.createElement('li');
+      if (row.status === 'played') item.className = 'done';
+      item.innerHTML = `<span><span class="song"></span><br><span class="by"></span></span>`;
+      item.querySelector('.song').textContent = row.song;
+      item.querySelector('.by').textContent = row.requested_by ? `asked by ${row.requested_by}` : 'anonymous';
+      if (row.status !== 'played') {
+        const button = document.createElement('button');
+        button.textContent = 'Mark played';
+        button.onclick = async () => { await cc.table('requests').update(row.id, { status: 'played' }); draw(); };
+        item.append(button);
+      }
+      return item;
+    }));
+    cc.resize();
+  }
+
+  draw();
+</script>
