@@ -7,7 +7,7 @@ import { listCapabilities } from './src/kernel/policy.js';
 import { listSlots } from './src/kernel/providers.js';
 
 await db.connect({ schemaDir: path.resolve('db') });
-console.log('1. db.connect + 4 migrations           OK');
+console.log('1. db.connect + migrations           OK');
 
 const tables = await db.q(
   `select table_name from information_schema.tables where table_schema = 'public' order by table_name`);

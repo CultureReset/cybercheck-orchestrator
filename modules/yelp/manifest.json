@@ -1,0 +1,35 @@
+{
+  "key": "yelp",
+  "version": "1.0.0",
+  "kind": "channel_app",
+  "name": "Yelp for Business",
+  "summary": "The business's own Yelp listing, driven through the app they are already signed in to.",
+  "androidPackage": "com.yelp.android.biz",
+  "carries": ["hours"],
+  "screens": ["business_info", "hours_editor"],
+  "routes": {
+    "hours": {
+      "write": [
+        { "open": "com.yelp.android.biz" },
+        { "tap": { "desc": "Business Information", "text": "Business Information" } },
+        { "at": "business_info" },
+        { "tap": { "desc": "Hours", "text": "Hours" } },
+        { "at": "hours_editor" },
+        { "type": "{{value.opens}}", "into": { "desc": "Opens", "text": "Opens" } },
+        { "type": "{{value.closes}}", "into": { "desc": "Closes", "text": "Closes" } },
+        { "tap": { "desc": "Save", "text": "Save" } },
+        { "expect": { "text": "Updated" } }
+      ],
+      "read": [
+        { "open": "com.yelp.android.biz" },
+        { "tap": { "desc": "Business Information", "text": "Business Information" } },
+        { "at": "business_info" },
+        { "tap": { "desc": "Hours", "text": "Hours" } },
+        { "at": "hours_editor" },
+        { "read": { "desc": "Opens", "text": "Opens" }, "as": "opens_at" },
+        { "read": { "desc": "Closes", "text": "Closes" }, "as": "closes_at" }
+      ],
+      "assemble": { "opens": "opens_at", "closes": "closes_at" }
+    }
+  }
+}

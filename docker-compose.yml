@@ -1,0 +1,51 @@
+# One customer, one stack.
+#
+# Postgres and the kernel run in containers, isolated per customer and holding
+# that customer's facts, maps and receipts on their own volume.
+#
+# deviced and voice run on the HOST, not here, and that is deliberate: deviced
+# needs the USB bus and a single owning adb server, and voice needs the CPU
+# without a virtualisation layer between it and the model. Both bind to
+# loopback only — deviced can drive every logged-in business account on the
+# phone, so it must never be reachable from the network.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ghost
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+      POSTGRES_DB: ghost
+    volumes:
+      - ghost-db:/var/lib/postgresql/data
+    secrets:
+      - db_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ghost"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  ghost:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://ghost:${GHOST_DB_PASSWORD}@db:5432/ghost
+      DEVICED_ENDPOINT: http://host.docker.internal:8391
+      VOICE_ENDPOINT: http://host.docker.internal:8392
+      LOCAL_MODEL_ENDPOINT: http://host.docker.internal:11434/v1
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "127.0.0.1:3000:3000"
+    restart: unless-stopped
+
+volumes:
+  ghost-db:
+
+secrets:
+  db_password:
+    file: ./secrets/db_password

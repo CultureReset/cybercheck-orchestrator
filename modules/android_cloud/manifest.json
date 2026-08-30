@@ -1,0 +1,8 @@
+{
+  "key": "android_cloud",
+  "version": "1.0.0",
+  "kind": "provider",
+  "fills": "workspace.executor",
+  "name": "Cloud Android",
+  "summary": "Runs appmap steps against a hosted Android instance. Simulated in this build; the interface is the one the real node implements."
+}

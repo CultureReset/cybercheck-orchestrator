@@ -1,0 +1,8 @@
+{
+  "key": "loop_harness",
+  "version": "1.0.0",
+  "kind": "harness",
+  "fills": "harness",
+  "name": "Loop harness",
+  "summary": "Chooses capabilities until a goal is met, from the set the acting person could reach by hand."
+}

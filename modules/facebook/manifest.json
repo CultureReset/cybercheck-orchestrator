@@ -1,0 +1,55 @@
+{
+  "key": "facebook",
+  "version": "1.0.0",
+  "kind": "channel_app",
+  "name": "Facebook Page",
+  "summary": "The business's own Facebook Page, driven through the app they are already signed in to.",
+  "androidPackage": "com.facebook.katana",
+  "carries": ["hours", "contact.phone"],
+  "screens": ["page_settings", "hours_editor"],
+  "routes": {
+    "hours": {
+      "write": [
+        { "open": "com.facebook.katana" },
+        { "tap": { "desc": "Your Page", "text": "Pages" } },
+        { "tap": { "desc": "Edit details", "text": "Edit details" } },
+        { "at": "page_settings" },
+        { "tap": { "desc": "Hours", "text": "Hours" } },
+        { "at": "hours_editor" },
+        { "type": "{{value.opens}}", "into": { "desc": "Open time", "text": "Open" } },
+        { "type": "{{value.closes}}", "into": { "desc": "Close time", "text": "Close" } },
+        { "tap": { "desc": "Save", "text": "Save" } },
+        { "expect": { "text": "Changes saved" } }
+      ],
+      "read": [
+        { "open": "com.facebook.katana" },
+        { "tap": { "desc": "Your Page", "text": "Pages" } },
+        { "tap": { "desc": "Edit details", "text": "Edit details" } },
+        { "at": "page_settings" },
+        { "tap": { "desc": "Hours", "text": "Hours" } },
+        { "at": "hours_editor" },
+        { "read": { "desc": "Open time", "text": "Open" }, "as": "opens_at" },
+        { "read": { "desc": "Close time", "text": "Close" }, "as": "closes_at" }
+      ],
+      "assemble": { "opens": "opens_at", "closes": "closes_at" }
+    },
+    "contact.phone": {
+      "write": [
+        { "open": "com.facebook.katana" },
+        { "tap": { "desc": "Your Page", "text": "Pages" } },
+        { "tap": { "desc": "Edit details", "text": "Edit details" } },
+        { "at": "page_settings" },
+        { "type": "{{value}}", "into": { "desc": "Phone number", "text": "Phone" } },
+        { "tap": { "desc": "Save", "text": "Save" } },
+        { "expect": { "text": "Changes saved" } }
+      ],
+      "read": [
+        { "open": "com.facebook.katana" },
+        { "tap": { "desc": "Your Page", "text": "Pages" } },
+        { "tap": { "desc": "Edit details", "text": "Edit details" } },
+        { "at": "page_settings" },
+        { "read": { "desc": "Phone number", "text": "Phone" }, "as": "phone" }
+      ]
+    }
+  }
+}

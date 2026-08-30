@@ -40,6 +40,31 @@ const KEY_OF = {
   'business.set_hours': 'hours',
   'business.set_temporary_closure': 'hours',
 };
+export function keyTouchedBy(capability) {
+  return KEY_OF[capability] ?? null;
+}
+// Which installed apps carry a key, without queueing anything. This is what the
+// owner is shown before a change is sent: the destinations were never theirs to
+// pick, but they do get to see them.
+export async function appsCarrying({ businessId, key }) {
+  const ws = await one(
+    `select * from workspace where business_id = $1 and kind = 'cloud_android'`, [businessId]
+  );
+  if (!ws) return [];
+  const apps = await q(
+    `select da.package_key from device_app da
+      where da.workspace_id = $1 and da.logged_in = true`, [ws.id]
+  );
+  const out = [];
+  for (const app of apps) {
+    const map = await one(
+      `select carries from appmap where package_key = $1 and status = 'active'
+        order by created_at desc limit 1`, [app.package_key]
+    );
+    if ((j(map?.carries) ?? []).includes(key)) out.push(app.package_key);
+  }
+  return out;
+}
 export function installFanOut() {
   subscribe('execution.succeeded', async ({ businessId, payload }) => {
     const key = KEY_OF[payload.capability];

@@ -1,0 +1,14 @@
+[Unit]
+Description=Ghost voice - transcription on the box
+After=network.target
+
+[Service]
+Type=simple
+User=ghost
+WorkingDirectory=/opt/ghost/voice
+ExecStart=/opt/ghost/voice/.venv/bin/uvicorn app:app --host 127.0.0.1 --port 8392
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

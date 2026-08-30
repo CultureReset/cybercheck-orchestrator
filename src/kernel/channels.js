@@ -54,15 +54,20 @@ defineCapability({
     if (!executor) throw new Error('no workspace executor bound');
     const steps = route.write.map(s => bind(s, value));
     try {
-      await executor.module.run({ workspace: ws, steps });
+      await executor.module.run({ workspace: ws, steps, packageKey });
     } catch (e) {
       if (e instanceof StepError) {
         // The map no longer matches the app. Stop; do not guess.
+        // The step carries the whole selector ladder it tried and the print of
+        // the screen it was actually on. That is the difference between a
+        // repair the loop can make in one pass and a re-mapping from scratch.
         await one(
-          `insert into repair_item (business_id, package_key, execution_id, step, reason, screen)
-           values ($1,$2,$3,$4::jsonb,$5,$6::jsonb) returning *`,
+          `insert into repair_item (business_id, package_key, execution_id, step, reason, screen,
+                                    tried, observed_fingerprint, expected_fingerprint)
+           values ($1,$2,$3,$4::jsonb,$5,$6::jsonb,$7::jsonb,$8,$9) returning *`,
           [ctx.businessId, packageKey, executionId, JSON.stringify(e.step), e.reason,
-           JSON.stringify(await executor.module.screenshot({ workspace: ws }))]
+           JSON.stringify(e.screen ?? await executor.module.screenshot({ workspace: ws })),
+           JSON.stringify(e.tried ?? []), e.fingerprint ?? null, e.expected ?? null]
         );
         throw new Error(`appmap mismatch on ${packageKey}: ${e.reason} (sent to repair queue)`);
       }
@@ -82,7 +87,7 @@ defineCapability({
       return { state: 'unknown', evidence: [{ kind: 'note', text: 'no read route in appmap' }] };
     }
     const executor = await resolve({ slot: 'workspace.executor', businessId: ctx.businessId });
-    const { readings, screen } = await executor.module.run({ workspace: ws, steps: route.read });
+    const { readings, screen } = await executor.module.run({ workspace: ws, steps: route.read, packageKey });
     const observed = route.assemble ? assemble(route.assemble, readings) : Object.values(readings)[0];
     const conn = await one(
       `select * from connection where business_id = $1 and provider_key = $2`, [ctx.businessId, packageKey]
@@ -126,7 +131,7 @@ defineCapability({
     const route = (j(map?.routes) ?? {})[key];
     if (!route?.read) throw new Error(`${packageKey} has no read route for "${key}"`);
     const executor = await resolve({ slot: 'workspace.executor', businessId: ctx.businessId });
-    const { readings } = await executor.module.run({ workspace: ws, steps: route.read });
+    const { readings } = await executor.module.run({ workspace: ws, steps: route.read, packageKey });
     const observed = route.assemble ? assemble(route.assemble, readings) : Object.values(readings)[0];
     const conn = await one(
       `select * from connection where business_id = $1 and provider_key = $2`, [ctx.businessId, packageKey]

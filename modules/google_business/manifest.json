@@ -1,0 +1,53 @@
+{
+  "key": "google_business",
+  "version": "1.0.0",
+  "kind": "channel_app",
+  "name": "Google Business Profile",
+  "summary": "The business's own Google listing, driven through the app they are already signed in to.",
+  "androidPackage": "com.google.android.apps.vega",
+  "carries": ["hours", "contact.phone"],
+  "screens": ["profile_home", "hours_editor", "contact_editor"],
+  "routes": {
+    "hours": {
+      "write": [
+        { "open": "com.google.android.apps.vega" },
+        { "tap": { "desc": "Edit profile", "text": "Edit profile" } },
+        { "at": "profile_home" },
+        { "tap": { "desc": "Business hours", "text": "Hours" } },
+        { "at": "hours_editor" },
+        { "type": "{{value.opens}}", "into": { "desc": "Opening time", "text": "Opens at" } },
+        { "type": "{{value.closes}}", "into": { "desc": "Closing time", "text": "Closes at" } },
+        { "tap": { "desc": "Save", "text": "Save" } },
+        { "expect": { "text": "Saved" } }
+      ],
+      "read": [
+        { "open": "com.google.android.apps.vega" },
+        { "tap": { "desc": "Edit profile", "text": "Edit profile" } },
+        { "at": "profile_home" },
+        { "tap": { "desc": "Business hours", "text": "Hours" } },
+        { "at": "hours_editor" },
+        { "read": { "desc": "Opening time", "text": "Opens at" }, "as": "opens_at" },
+        { "read": { "desc": "Closing time", "text": "Closes at" }, "as": "closes_at" }
+      ],
+      "assemble": { "opens": "opens_at", "closes": "closes_at" }
+    },
+    "contact.phone": {
+      "write": [
+        { "open": "com.google.android.apps.vega" },
+        { "tap": { "desc": "Edit profile", "text": "Edit profile" } },
+        { "at": "profile_home" },
+        { "tap": { "desc": "Phone number", "text": "Phone" } },
+        { "at": "contact_editor" },
+        { "type": "{{value}}", "into": { "desc": "Phone number", "text": "Phone" } },
+        { "tap": { "desc": "Save", "text": "Save" } },
+        { "expect": { "text": "Saved" } }
+      ],
+      "read": [
+        { "open": "com.google.android.apps.vega" },
+        { "tap": { "desc": "Edit profile", "text": "Edit profile" } },
+        { "at": "profile_home" },
+        { "read": { "desc": "Phone number", "text": "Phone" }, "as": "phone" }
+      ]
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "key": "business_profile",
+  "version": "1.0.0",
+  "kind": "app",
+  "name": "Business Profile",
+  "summary": "The business's own name, story, hours and contact details, rendered from canonical facts rather than copied.",
+  "capabilities": ["business_profile.update_contact"],
+  "public": [
+    { "key": "about", "title": "About", "icon": "info", "order": 10, "renderer": "about" },
+    { "key": "hours", "title": "Hours", "icon": "clock", "order": 20, "renderer": "hours" },
+    { "key": "contact", "title": "Contact", "icon": "phone", "order": 30, "renderer": "contact" }
+  ]
+}

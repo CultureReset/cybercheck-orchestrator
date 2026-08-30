@@ -1,0 +1,8 @@
+{
+  "key": "hosted_models",
+  "version": "1.0.0",
+  "kind": "provider",
+  "fills": "model",
+  "name": "Hosted models",
+  "summary": "Claude, over the network. Used for the expensive thinking: first mapping, unknown screens, and repair."
+}

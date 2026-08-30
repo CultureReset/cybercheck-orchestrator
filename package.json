@@ -1,20 +1,20 @@
 {
   "name": "ghost-platform",
   "version": "1.0.0",
-  "description": "",
+  "description": "One canonical value, carried into every app that holds a copy of it, and read back off each screen to prove it landed.",
   "main": "index.js",
   "scripts": {
-    "demo": "node demo.js",
-    "demo:device": "node demo-device.js",
-    "demo:modular": "node demo-modular.js",
-    "demo:surfaces": "node demo-surfaces.js",
     "start": "node src/http/server.js",
-    "verify": "node verify.mjs"
+    "demo:device": "node demo-device.js",
+    "verify": "node verify.mjs",
+    "deviced": "cd deviced && .venv/bin/uvicorn app:app --host 127.0.0.1 --port 8391",
+    "voice": "cd voice && .venv/bin/uvicorn app:app --host 127.0.0.1 --port 8392"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.122.0",
     "express": "^5.2.1",
     "pg": "^8.23.0",
     "pg-mem": "^3.0.14"

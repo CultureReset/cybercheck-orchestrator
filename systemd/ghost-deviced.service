@@ -1,0 +1,17 @@
+[Unit]
+Description=Ghost deviced - the one process that owns the phone
+After=network.target
+
+[Service]
+Type=simple
+User=ghost
+Group=plugdev
+WorkingDirectory=/opt/ghost/deviced
+# Loopback only. This service can drive every logged-in business account on the
+# phone; it must never be reachable from the network.
+ExecStart=/opt/ghost/deviced/.venv/bin/uvicorn app:app --host 127.0.0.1 --port 8391
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -20,6 +20,11 @@ import { runHarness, runs } from '../kernel/harness.js';
 import { propose, approve, reject } from '../kernel/builder.js';
 import { importRepo, jobs, steps as importSteps } from '../kernel/importer.js';
 import { verify as verifySignature } from '../kernel/signing.js';
+import * as repair from '../kernel/repair.js';
+import * as intent from '../kernel/intent.js';
+import { appsCarrying } from '../kernel/fanout.js';
+import { resolve as resolveProvider } from '../kernel/providers.js';
+import { androidWorkspace } from '../kernel/workspace.js';
 const app = express();
 app.use(express.json());
 // Identity is stubbed here on purpose: swap this middleware for whatever
@@ -275,7 +280,97 @@ app.get('/api/b/:slug/import', withContext, async (req, res) => {
 app.get('/api/packages/:key/:version/signature', async (req, res) => {
   res.json(await verifySignature({ packageKey: req.params.key, version: req.params.version }));
 });
+// --- what the owner said -----------------------------------------------------
+// Nothing here executes. Interpretation produces a proposal and the apps it
+// would reach; the owner confirms, and only then does the executor run.
+app.post('/api/b/:slug/say', withContext, async (req, res) => {
+  try {
+    res.json(await intent.interpret({
+      ctx: req.ctx,
+      transcript: req.body.transcript,
+      surface: req.body.surface ?? 'text',
+      audioSeconds: req.body.audioSeconds ?? null,
+    }));
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.post('/api/b/:slug/intents/:id/confirm', withContext, async (req, res) => {
+  try {
+    const out = await intent.confirm({ ctx: req.ctx, intentId: req.params.id });
+    await drain();
+    res.json(out);
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.post('/api/b/:slug/intents/:id/reject', withContext, async (req, res) => {
+  res.json(await intent.reject({ ctx: req.ctx, intentId: req.params.id }));
+});
+app.get('/api/b/:slug/intents', withContext, async (req, res) => {
+  res.json(await intent.history(req.ctx.businessId));
+});
+
+// --- repair ------------------------------------------------------------------
+// propose reads, dry-run replays the read path only, and promote needs a
+// person. A model never writes to a live business account unapproved.
+app.get('/api/b/:slug/repairs', withContext, async (req, res) => {
+  res.json(await repair.open(req.ctx.businessId));
+});
+app.post('/api/b/:slug/repairs/:id/propose', withContext, async (req, res) => {
+  try { res.json(await repair.propose({ ctx: req.ctx, repairItemId: req.params.id })); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.post('/api/b/:slug/repairs/:id/dry-run', withContext, async (req, res) => {
+  try { res.json(await repair.dryRun({ ctx: req.ctx, repairItemId: req.params.id })); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.post('/api/b/:slug/repairs/:id/promote', withContext, async (req, res) => {
+  try { res.json(await repair.promote({ ctx: req.ctx, repairItemId: req.params.id })); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+// --- reconciliation ----------------------------------------------------------
+// Read every app that carries a key and compare it to canonical, whether or not
+// anyone asked for a change. Most of what this finds is not our own failures —
+// it is a staff member who edited one app directly, or a platform that quietly
+// reverted an edit. Run it nightly.
+app.post('/api/b/:slug/reconcile/:key', withContext, async (req, res) => {
+  const key = req.params.key;
+  const apps = await appsCarrying({ businessId: req.ctx.businessId, key });
+  const read = [];
+  for (const packageKey of apps) {
+    const out = await request({
+      ctx: req.ctx, capability: 'channel.read',
+      input: { packageKey, key }, resource: packageKey,
+    });
+    read.push({ packageKey, error: out.error?.message ?? null });
+  }
+  await drain();
+  res.json({ key, read, ...(await drift({ businessId: req.ctx.businessId, key })) });
+});
+
+// --- the phone ---------------------------------------------------------------
+app.get('/api/b/:slug/device', withContext, async (req, res) => {
+  const ws = await androidWorkspace(req.ctx.businessId);
+  if (!ws) return res.status(404).json({ error: 'no workspace' });
+  const node = await db.one(
+    `select serial, endpoint, transport, state, android_version, battery_level, last_seen
+       from device_node where workspace_id = $1`, [ws.id]);
+  const executor = await resolveProvider({ slot: 'workspace.executor', businessId: req.ctx.businessId });
+  res.json({ workspace: ws.id, executor: executor?.manifest.key ?? null, node });
+});
+// Which build of each app is on the phone. A versionCode that moved marks every
+// map for that package needs_revalidation, because that is the most common way
+// a working system starts quietly writing wrong data.
+app.post('/api/b/:slug/device/versions', withContext, async (req, res) => {
+  try {
+    const ws = await androidWorkspace(req.ctx.businessId);
+    const executor = await resolveProvider({ slot: 'workspace.executor', businessId: req.ctx.businessId });
+    if (!executor?.module.reconcileVersions) {
+      return res.status(400).json({ error: 'this executor has no app versions to report' });
+    }
+    res.json(await executor.module.reconcileVersions({ workspace: ws }));
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
 const port = process.env.PORT || 3000;
-await boot();
+await boot({ url: process.env.DATABASE_URL });
 for (const t of ['forms.submitted', 'execution.succeeded', 'canonical.fact_changed']) await watch(t);
 app.listen(port, () => console.log(`platform listening on :${port}`));

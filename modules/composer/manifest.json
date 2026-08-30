@@ -1,0 +1,8 @@
+{
+  "key": "composer",
+  "version": "1.0.0",
+  "kind": "builder",
+  "fills": "builder",
+  "name": "Composer",
+  "summary": "Turns a description into a plan built only from capabilities the platform already has."
+}

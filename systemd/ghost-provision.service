@@ -1,0 +1,14 @@
+[Unit]
+Description=Personalise this Ghost box on first boot of a cloned drive
+ConditionPathExists=!/var/lib/ghost/provisioned
+Before=ghost-deviced.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/ghost/scripts/provision.sh
+RemainAfterExit=yes
+StandardInput=tty
+StandardOutput=journal+console
+
+[Install]
+WantedBy=multi-user.target

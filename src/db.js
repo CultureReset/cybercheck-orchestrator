@@ -43,14 +43,37 @@ async function memoryPostgres() {
   return new Pool();
 }
 
-// Applied in filename order, which is why the files are numbered.
+// Applied in filename order, which is why the files are numbered. A file is
+// applied once and recorded; the in-memory database starts empty every time and
+// so replays all of them, and a real Postgres that survives a reboot does not.
 async function migrate(schemaDir) {
   if (!fs.existsSync(schemaDir)) return;
+  await pool.query(`create table if not exists schema_migration (
+    filename text primary key,
+    content_hash text not null,
+    applied_at timestamptz not null default now()
+  )`);
+  const applied = new Map(
+    (await pool.query('select filename, content_hash from schema_migration')).rows
+      .map(r => [r.filename, r.content_hash])
+  );
   const files = fs.readdirSync(schemaDir).filter(f => f.endsWith('.sql')).sort();
   for (const file of files) {
     const sql = fs.readFileSync(path.join(schemaDir, file), 'utf8');
+    const hash = crypto.createHash('sha256').update(sql).digest('hex');
+    const seen = applied.get(file);
+    if (seen === hash) continue;
+    if (seen && seen !== hash) {
+      // Editing an applied migration silently diverges every database that
+      // already ran the old text. Add a new file instead.
+      throw new Error(`migration ${file} changed after it was applied; add a new file instead`);
+    }
     try {
       await pool.query(sql);
+      await pool.query(
+        'insert into schema_migration (filename, content_hash) values ($1,$2)',
+        [file, hash]
+      );
     } catch (e) {
       throw new Error(`migration ${file} failed: ${e.message}`);
     }

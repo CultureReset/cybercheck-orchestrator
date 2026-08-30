@@ -1,0 +1,8 @@
+{
+  "key": "local_models",
+  "version": "1.0.0",
+  "kind": "provider",
+  "fills": "model",
+  "name": "Local models",
+  "summary": "A model running on the box itself. Nothing leaves the customer's own hardware."
+}
