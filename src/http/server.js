@@ -4,6 +4,7 @@ import * as db from '../db.js';
 import { listPackages } from '../kernel/registry.js';
 import { install, uninstall } from '../kernel/installer.js';
 import { request, decide } from '../kernel/executor.js';
+import { intake, history as intakeHistory } from '../kernel/intake.js';
 import { listCapabilities } from '../kernel/policy.js';
 import { publicProfile } from '../kernel/projection.js';
 import { verifyChain } from '../kernel/ledger.js';
@@ -65,6 +66,23 @@ app.post('/api/b/:slug/invoke', withContext, async (req, res) => {
   });
   await drain();
   res.status(out.error ? 400 : 200).json(out);
+});
+// --- what the owner actually said --------------------------------------------
+// The same executor as /invoke, reached from a sentence instead of a capability
+// key. An unclear message answers with a question and runs nothing.
+app.post('/api/b/:slug/request', withContext, async (req, res) => {
+  const out = await intake({
+    ctx: req.ctx,
+    text: req.body.text,
+    channel: req.body.channel ?? 'text',
+    transcriptOf: req.body.transcriptOf ?? null,
+    confirm: req.body.confirm === true,
+  });
+  await drain();
+  res.status(out.error ? 400 : 200).json(out);
+});
+app.get('/api/b/:slug/requests', withContext, async (req, res) => {
+  res.json(await intakeHistory(req.ctx.businessId));
 });
 app.get('/api/b/:slug/approvals', withContext, async (req, res) => {
   res.json(await db.q(

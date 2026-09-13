@@ -6,8 +6,10 @@ import './src/kernel/channels.js';
 import { listCapabilities } from './src/kernel/policy.js';
 import { listSlots } from './src/kernel/providers.js';
 
-await db.connect({ schemaDir: path.resolve('db') });
-console.log('1. db.connect + 4 migrations           OK');
+const schemaDir = path.resolve('db');
+const migrations = (await import('node:fs')).readdirSync(schemaDir).filter(f => f.endsWith('.sql'));
+await db.connect({ schemaDir });
+console.log(`1. db.connect + ${migrations.length} migrations           OK`);
 
 const tables = await db.q(
   `select table_name from information_schema.tables where table_schema = 'public' order by table_name`);
@@ -53,4 +55,16 @@ console.log('9. receipt chain                      ', JSON.stringify(await verif
 // Denial path: a capability with no grant must be refused.
 const denied = await request({ ctx, capability: 'business.set_hours', input: { days: [] } });
 console.log(`10. ungranted capability               ${denied.error ? 'refused: ' + denied.error.message : 'ALLOWED — WRONG'}`);
+
+// Intake: a sentence, not a capability key. Same executor, same receipt.
+await grant({ businessId: biz.id, role: 'owner', capability: 'business.set_temporary_closure', disposition: 'auto' });
+await db.one(`insert into location (business_id, label, timezone, is_primary) values ($1,'Main','America/Chicago',true) returning *`,
+             [biz.id]);
+const { intake } = await import('./src/kernel/intake.js');
+const said = await intake({ ctx, text: 'Update my hours. We close at 10 PM tonight.' });
+console.log(`11. sentence -> capability             ${said.capability} closes=${said.input.closes} verification=${said.verification}`);
+
+const vague = await intake({ ctx, text: 'update my hours', useModel: false });
+console.log(`12. unclear sentence                   ${vague.understood ? 'ACTED — WRONG' : 'asked back: ' + vague.question}`);
+
 process.exit(0);

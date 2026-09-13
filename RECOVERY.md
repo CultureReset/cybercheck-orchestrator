@@ -76,8 +76,8 @@ pg-mem does not ship `pgcrypto`.
 packages involved beyond the one that survived:
 
 ```
-1. db.connect + 4 migrations           OK
-2. tables created                      44
+1. db.connect + 5 migrations           OK
+2. tables created                      45
 3. packages loaded                     1  [availability]
 4. capabilities registered             9
 5. slots declared                      6  [workspace.executor, model, harness, builder, memory, sandbox]
@@ -86,8 +86,14 @@ packages involved beyond the one that survived:
 8. capability executed                 state=succeeded verification=verified
 9. receipt chain                       {"ok":true,"count":1}
 10. ungranted capability               refused: not permitted: business.set_hours
+11. sentence -> capability             business.set_temporary_closure closes=22:00 verification=verified
+12. unclear sentence                   asked back: Which day? "tonight", "tomorrow", or "Fridays" for every week.
 ```
 
+`npm test` runs the intake unit tests — 21 tests, pg-mem only, no network.
+
+Lines 11 and 12 are the intake layer added after the recovery — see
+`docs/intake.md`.
 Line 8 is the claim that matters: the capability ran, and then its verifier
 re-read the fact and returned `verified` — not `unknown`, which is what the
 kernel gives anything that cannot prove itself. Line 9 is the hash chain
