@@ -1,0 +1,8 @@
+{
+  "key": "android_local_node",
+  "version": "1.0.0",
+  "kind": "provider",
+  "fills": "workspace.executor",
+  "name": "Android Local Node",
+  "summary": "Runs appmap steps against the in-process device driver. The simulator today, an ADB-backed instance behind the same three exports later."
+}

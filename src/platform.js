@@ -29,14 +29,21 @@ export async function contextFor({ personId, businessSlug }) {
 // Platform defaults. A business overrides any of these with one row.
 async function defaults() {
   const { bind: bindSlot } = await import('./kernel/providers.js');
+  // First of each list that is actually loaded wins. A default naming a package
+  // that is not on disk used to stop boot outright, which is the wrong failure:
+  // a slot with no provider should leave that slot empty, not take the platform
+  // down with it.
   const pairs = [
-    ['workspace.executor', 'android_cloud'],
-    ['builder', 'composer'],
-    ['harness', 'loop_harness'],
-    ['model', 'hosted_models'],
+    ['workspace.executor', ['android_cloud', 'android_local_node']],
+    ['builder', ['composer']],
+    ['harness', ['loop_harness']],
+    ['model', ['hosted_models', 'local_models']],
   ];
   const { q } = await import('./db.js');
-  for (const [slot, pkg] of pairs) {
+  const { getPackage } = await import('./kernel/registry.js');
+  for (const [slot, preferred] of pairs) {
+    const pkg = preferred.find(key => getPackage(key));
+    if (!pkg) continue;
     const existing = await q(
       `select 1 from provider_binding where slot_key = $1 and business_id is null and active = true and package_key = $2`,
       [slot, pkg]
