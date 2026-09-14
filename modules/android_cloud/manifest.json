@@ -1,0 +1,8 @@
+{
+  "key": "android_cloud",
+  "version": "1.0.0",
+  "kind": "provider",
+  "name": "Android Cloud Executor",
+  "summary": "Runs appmap steps against the business's own cloud Android workspace and reports back what the screen shows.",
+  "fills": "workspace.executor"
+}
