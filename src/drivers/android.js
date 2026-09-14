@@ -83,8 +83,35 @@ export class StepError extends Error {
 }
 // One driver per workspace, held in process. Replace the Simulator with an
 // ADB-backed device and nothing above this file changes.
+//
+// NEXTGENT_DEVICE=adb picks the real phone; anything else keeps the Simulator,
+// so demos and tests are unaffected. NEXTGENT_ADB_SERIAL selects which phone
+// when more than one is attached.
 const devices = new Map();
+async function makeDevice() {
+  if (process.env.NEXTGENT_DEVICE !== 'adb') return new Simulator();
+  const { AdbDevice } = await import('./adb.js');
+  return new AdbDevice({ serial: process.env.NEXTGENT_ADB_SERIAL || null });
+}
 export function deviceFor(workspaceId) {
-  if (!devices.has(workspaceId)) devices.set(workspaceId, new Simulator());
+  if (!devices.has(workspaceId)) {
+    devices.set(
+      workspaceId,
+      process.env.NEXTGENT_DEVICE === 'adb' ? lazyAdb() : new Simulator()
+    );
+  }
   return devices.get(workspaceId);
+}
+// The real device is created without awaiting, so deviceFor keeps its
+// synchronous signature and every existing caller is untouched. Calls queue
+// behind the import.
+function lazyAdb() {
+  const ready = makeDevice();
+  const forward = (name) => async (...args) => (await ready)[name](...args);
+  return {
+    run: forward('run'),
+    screenshot: forward('screenshot'),
+    installApp: forward('installApp'),
+    login: forward('login'),
+  };
 }
