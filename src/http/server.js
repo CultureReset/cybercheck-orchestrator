@@ -20,6 +20,8 @@ import { runHarness, runs } from '../kernel/harness.js';
 import { propose, approve, reject } from '../kernel/builder.js';
 import { importRepo, jobs, steps as importSteps } from '../kernel/importer.js';
 import { verify as verifySignature } from '../kernel/signing.js';
+import { interfaceReport } from '../kernel/interface.js';
+import { attention } from '../kernel/attention.js';
 const app = express();
 app.use(express.json());
 // Identity is stubbed here on purpose: swap this middleware for whatever
@@ -33,6 +35,12 @@ async function withContext(req, res, next) {
     next();
   } catch (e) { res.status(404).json({ error: e.message }); }
 }
+// --- the contract ------------------------------------------------------------
+// Anything that talks to the kernel reads this first and checks the major
+// against the range it was built for. Unauthenticated on purpose: refusing to
+// start cleanly must not itself depend on getting identity right.
+app.get('/api/interface', (_req, res) => res.json(interfaceReport()));
+
 // --- app store ---------------------------------------------------------------
 app.get('/api/packages', (_req, res) => res.json(listPackages()));
 app.get('/api/capabilities', (_req, res) => res.json(listCapabilities()));
@@ -145,6 +153,9 @@ app.get('/api/b/:slug/sync', withContext, async (req, res) => {
 // Force a fan-out by hand. Normally nothing calls this: a canonical change does.
 app.post('/api/b/:slug/sync/:key', withContext, async (req, res) => {
   res.json(await fanOut({ ctx: req.ctx, key: req.params.key }));
+});
+app.get('/api/b/:slug/attention', withContext, async (req, res) => {
+  res.json(await attention(req.ctx.businessId));
 });
 app.get('/api/b/:slug/repairs', withContext, async (req, res) => {
   res.json(await db.q(

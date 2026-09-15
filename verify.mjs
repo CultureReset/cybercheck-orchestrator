@@ -164,4 +164,18 @@ console.log(`19. one map drifts                     broken=[${drifted.join(', ')
 const queue = await db.q(`select package_key, reason from repair_item where business_id = $1 order by created_at`, [biz.id]);
 console.log(`20. repair queue after drift           ${queue.map(r => `${r.package_key}: ${r.reason}`).join('; ')}`);
 
+// --- the L1 contract ---------------------------------------------------------
+// What the shell reads before it talks to the kernel at all, and the one list
+// the owner actually sees.
+const { interfaceReport } = await import('./src/kernel/interface.js');
+const { attention } = await import('./src/kernel/attention.js');
+const iface = interfaceReport();
+console.log(`21. kernel interface declared          ${iface.version}`);
+
+// Something only the owner can fix, to prove it reaches the same list.
+await db.q(`update device_app set logged_in = false where business_id = $1 and package_key = 'yelp_business'`, [biz.id]);
+const needs = await attention(biz.id);
+console.log(`22. needs attention                    ${needs.count}`);
+for (const i of needs.items) console.log(`     ${i.severity.padEnd(9)} ${i.title}`);
+
 process.exit(0);
