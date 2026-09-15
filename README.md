@@ -6,10 +6,26 @@ Every action in the estate — a dashboard click, an automation, a module callin
 another module, a harness pursuing a goal — goes through one loop here and
 leaves a receipt. Nothing executes any other way.
 
-> Read `RECOVERY.md` before trusting anything in this repo. It was
-> reconstituted from PDF printouts; 28 of 28 recovered `.js` files parse, and
-> the 4 SQL migrations are byte-identical to the originals, but this is not a
-> normal checkout.
+> **The real documentation is in `docs/`.** This file is a map of the code as
+> it exists in this checkout; `docs/` is the design and the record.
+>
+> | | |
+> |---|---|
+> | `docs/README.md` | the platform, the kernel/package split, the execution model |
+> | `docs/STATUS.md` | every item built and not built, with what proves each one |
+> | `docs/CORPUS-INDEX.md` | what is in the source documents, read programmatically |
+> | `docs/ghost-modular-build-plan.md` | the modular build plan |
+> | `docs/02-foundation-build-guide.md` | the foundation guide |
+> | `docs/demos/` | recorded demo output |
+>
+> Also read `RECOVERY.md` before trusting anything here. This checkout was
+> reconstituted from PDF printouts; 28 of 28 recovered `.js` files parse and the
+> 4 SQL migrations are byte-identical to the originals, but it is not a normal
+> checkout — **and the counts below are of what survived, not of what was
+> built.** `docs/STATUS.md` describes the original as 3,557 lines across 39 JS
+> files, 43 tables, 14 packages and 48 HTTP endpoints. This tree has 28 JS
+> files, 41 tables, 2 packages and 40 routes. The difference is what recovery
+> lost.
 
 ## The loop
 
@@ -63,6 +79,12 @@ create table appmap (
 When a map stops matching reality the run lands in `repair_item` instead of
 silently writing the wrong thing.
 
+**Execution is the device, not an API.** The executor is the business's own
+cloud Android instance — `provision()` creates two workloads on one host, the
+Android instance and a container, each with a persistent volume. The business
+installs the real apps onto it and logs in with their own accounts. The
+credential never leaves the workspace.
+
 ## Harnesses
 
 `src/kernel/harness.js`. **A harness gets a goal, not a database.**
@@ -84,6 +106,16 @@ it offers, scores the candidates against the task
 falls back on failure, and records the decision in `routing_decision`.
 
 ## Packages
+
+The kernel is `src/` plus the SQL. It contains no business features. Everything
+else is a package in `modules/`, and every one of them is removable.
+
+Package kinds, per `docs/README.md`:
+
+| `app` | own data, a dashboard, optionally a public section — QR menu, forms, CRM |
+| --- | --- |
+| `channel_app` | a real Android app the business installs on their own device and logs into — Facebook, Google Business Profile, Yelp. **Carries an appmap.** |
+| `automations` | data, not code. A trigger and a list of capability calls. Publishable. |
 
 A package is a directory with a `manifest.json`. `registry.js` reads every one,
 validates it, registers its capabilities and publishes it for install.
