@@ -27,8 +27,18 @@ export async function contextFor({ personId, businessSlug }) {
   return { businessId: business.id, business, person, membership };
 }
 // Platform defaults. A business overrides any of these with one row.
+//
+// A slot whose package has not been written yet stays empty, and the kernel
+// still boots. It used to throw on the first one, which meant a single
+// unwritten provider took the whole box down before it could serve anything —
+// including the screen that would have told the owner what was wrong.
+//
+// An empty slot is a real state with a correct behaviour: whatever needs it
+// fails when it is asked for, by name, and everything else keeps running.
+export const UNBOUND = [];
 async function defaults() {
   const { bind: bindSlot } = await import('./kernel/providers.js');
+  const { getPackage } = await import('./kernel/registry.js');
   const pairs = [
     ['workspace.executor', 'android_cloud'],
     ['builder', 'composer'],
@@ -36,7 +46,9 @@ async function defaults() {
     ['model', 'hosted_models'],
   ];
   const { q } = await import('./db.js');
+  UNBOUND.length = 0;
   for (const [slot, pkg] of pairs) {
+    if (!getPackage(pkg)) { UNBOUND.push({ slot, packageKey: pkg }); continue; }
     const existing = await q(
       `select 1 from provider_binding where slot_key = $1 and business_id is null and active = true and package_key = $2`,
       [slot, pkg]
@@ -45,5 +57,9 @@ async function defaults() {
       await bindSlot({ businessId: null, slot, packageKey: pkg,
                        config: slot === 'model' ? { simulate: true } : {} });
     }
+  }
+  if (UNBOUND.length) {
+    console.warn(`[platform] ${UNBOUND.length} slot(s) unbound, package not built: ` +
+      UNBOUND.map(u => `${u.slot} -> ${u.packageKey}`).join(', '));
   }
 }
