@@ -129,8 +129,9 @@ console.log(`16. altered map refused                 ${refused ?? 'ACCEPTED — 
 // Three destinations on the device. Two have maps in the catalog. The third
 // does not, which is work for the shop rather than a failure on the box.
 for (const [key, androidPackage, name, screen] of [
-  ['google_business', 'com.google.android.apps.vega', 'Google Business Profile',
-   { Profile: 1, Hours: 1, opens_at: '09:00', closes_at: '17:00', Save: 1, Saved: 1 }],
+  ['google_business', 'com.google.android.apps.maps', 'Google Business Profile',
+   { Business: 1, 'Edit profile': 1, Hours: 1, opens_at: '09:00', closes_at: '17:00',
+     Phone: 1, phone: '', Website: 1, website: '', 'Business description': 1, description: '', Save: 1 }],
   ['facebook_pages', 'com.facebook.pages.app', 'Facebook Pages',
    { 'Edit Page': 1, Hours: 1, opens_at: '09:00', closes_at: '17:00', 'Save Changes': 1, 'Changes saved': 1 }],
   ['yelp_business', 'com.yelp.android.biz', 'Yelp for Business', { Hours: 1 }],

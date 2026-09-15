@@ -1,0 +1,79 @@
+{
+  "packageKey": "google_business",
+  "appVersion": "maps-11.150",
+  "androidPackage": "com.google.android.apps.maps",
+  "carries": ["hours", "contact.phone", "contact.website", "business.description"],
+  "routes": {
+    "hours": {
+      "write": [
+        { "open": "com.google.android.apps.maps" },
+        { "tap": "Business" },
+        { "tap": "Edit profile" },
+        { "tap": "Hours" },
+        { "type": "{{value.opens_at}}", "into": "opens_at" },
+        { "type": "{{value.closes_at}}", "into": "closes_at" },
+        { "tap": "Save" }
+      ],
+      "read": [
+        { "open": "com.google.android.apps.maps" },
+        { "tap": "Business" },
+        { "tap": "Edit profile" },
+        { "tap": "Hours" },
+        { "read": "opens_at" },
+        { "read": "closes_at" }
+      ],
+      "assemble": { "opens_at": "opens_at", "closes_at": "closes_at" }
+    },
+    "contact.phone": {
+      "write": [
+        { "open": "com.google.android.apps.maps" },
+        { "tap": "Business" },
+        { "tap": "Edit profile" },
+        { "tap": "Phone" },
+        { "type": "{{value}}", "into": "phone" },
+        { "tap": "Save" }
+      ],
+      "read": [
+        { "open": "com.google.android.apps.maps" },
+        { "tap": "Business" },
+        { "tap": "Edit profile" },
+        { "tap": "Phone" },
+        { "read": "phone" }
+      ]
+    },
+    "contact.website": {
+      "write": [
+        { "open": "com.google.android.apps.maps" },
+        { "tap": "Business" },
+        { "tap": "Edit profile" },
+        { "tap": "Website" },
+        { "type": "{{value}}", "into": "website" },
+        { "tap": "Save" }
+      ],
+      "read": [
+        { "open": "com.google.android.apps.maps" },
+        { "tap": "Business" },
+        { "tap": "Edit profile" },
+        { "tap": "Website" },
+        { "read": "website" }
+      ]
+    },
+    "business.description": {
+      "write": [
+        { "open": "com.google.android.apps.maps" },
+        { "tap": "Business" },
+        { "tap": "Edit profile" },
+        { "tap": "Business description" },
+        { "type": "{{value}}", "into": "description" },
+        { "tap": "Save" }
+      ],
+      "read": [
+        { "open": "com.google.android.apps.maps" },
+        { "tap": "Business" },
+        { "tap": "Edit profile" },
+        { "tap": "Business description" },
+        { "read": "description" }
+      ]
+    }
+  }
+}
