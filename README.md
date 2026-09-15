@@ -85,6 +85,19 @@ Android instance and a container, each with a persistent volume. The business
 installs the real apps onto it and logs in with their own accounts. The
 credential never leaves the workspace.
 
+**Where a map comes from.** `installOnDevice()` writes an appmap row from a
+manifest a person authored — fine for a handful of apps, not for thirty-two.
+`channel.explore` (`src/kernel/explorer.js`) is the other way: it opens an app
+that is already logged in, reads whatever screen `entry` steps land it on, and
+matches the fields it finds against `hints` (`canonicalKey -> candidate
+labels`). What it writes is a `status: 'candidate'` row — same shape as an
+authored one, inert until `appmap.promote` flips it to `active` and retires
+whichever map was active before. Nothing it proposes is trusted first; it is
+`agentSafe: true` because it only ever reads the screen, never taps or types
+into it. Proven end-to-end against a scratch business, the `Simulator` driver,
+and the real `request()` dispatch path — not by the demo suite, since
+`demo*.js` did not survive recovery (see the counts above).
+
 ## Harnesses
 
 `src/kernel/harness.js`. **A harness gets a goal, not a database.**

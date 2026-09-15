@@ -4,6 +4,7 @@ import * as db from './db.js';
 import { loadPackages } from './kernel/registry.js';
 import './kernel/canonical.js';  // registers kernel capabilities
 import './kernel/channels.js';   // registers the android route capabilities
+import './kernel/explorer.js';   // registers channel.explore and appmap.promote
 import { installFanOut } from './kernel/fanout.js';
 import { bind } from './kernel/providers.js';
 const here = path.dirname(fileURLToPath(import.meta.url));
