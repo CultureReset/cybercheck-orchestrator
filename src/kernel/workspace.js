@@ -34,13 +34,19 @@ export async function installOnDevice({ businessId, packageKey, accountLabel, in
   if (!pkg) throw new Error(`no such package: ${packageKey}`);
   const m = pkg.manifest;
   if (m.kind !== 'channel_app') throw new Error(`${packageKey} is not a channel app`);
-  await one(
-    `insert into appmap (package_key, version, android_package, carries, routes)
-     values ($1,$2,$3,$4::jsonb,$5::jsonb)
-     on conflict (package_key, version) do update set routes = excluded.routes,
-       carries = excluded.carries returning *`,
-    [m.key, m.version, m.androidPackage, JSON.stringify(m.carries ?? []), JSON.stringify(m.routes ?? {})]
-  );
+  // A manifest may carry its own routes, and the development packages do. The
+  // catalog is the real path: maps arrive as signed bundles on their own
+  // channel, versioned against the app rather than against this package. A
+  // manifest that declares no routes leaves the map to the catalog.
+  if (Object.keys(m.routes ?? {}).length) {
+    await one(
+      `insert into appmap (package_key, version, android_package, carries, routes)
+       values ($1,$2,$3,$4::jsonb,$5::jsonb)
+       on conflict (package_key, version) do update set routes = excluded.routes,
+         carries = excluded.carries returning *`,
+      [m.key, m.version, m.androidPackage, JSON.stringify(m.carries ?? []), JSON.stringify(m.routes ?? {})]
+    );
+  }
   const executor = await resolve({ slot: 'workspace.executor', businessId });
   if (!executor) throw new Error('no workspace executor bound');
   await executor.module.prepare({ workspace: ws, androidPackage: m.androidPackage, accountLabel, initialScreen });

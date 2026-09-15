@@ -1,0 +1,27 @@
+{
+  "packageKey": "google_business",
+  "appVersion": "542.0.3",
+  "androidPackage": "com.google.android.apps.vega",
+  "carries": ["hours"],
+  "routes": {
+    "hours": {
+      "write": [
+        { "open": "com.google.android.apps.vega" },
+        { "tap": "Profile" },
+        { "tap": "Hours" },
+        { "type": "{{value.opens_at}}", "into": "opens_at" },
+        { "type": "{{value.closes_at}}", "into": "closes_at" },
+        { "tap": "Save" },
+        { "expect": "Saved" }
+      ],
+      "read": [
+        { "open": "com.google.android.apps.vega" },
+        { "tap": "Profile" },
+        { "tap": "Hours" },
+        { "read": "opens_at" },
+        { "read": "closes_at" }
+      ],
+      "assemble": { "opens_at": "opens_at", "closes_at": "closes_at" }
+    }
+  }
+}

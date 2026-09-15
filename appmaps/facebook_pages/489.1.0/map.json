@@ -1,0 +1,27 @@
+{
+  "packageKey": "facebook_pages",
+  "appVersion": "489.1.0",
+  "androidPackage": "com.facebook.pages.app",
+  "carries": ["hours"],
+  "routes": {
+    "hours": {
+      "write": [
+        { "open": "com.facebook.pages.app" },
+        { "tap": "Edit Page" },
+        { "tap": "Hours" },
+        { "type": "{{value.opens_at}}", "into": "opens_at" },
+        { "type": "{{value.closes_at}}", "into": "closes_at" },
+        { "tap": "Save Changes" },
+        { "expect": "Changes saved" }
+      ],
+      "read": [
+        { "open": "com.facebook.pages.app" },
+        { "tap": "Edit Page" },
+        { "tap": "Hours" },
+        { "read": "opens_at" },
+        { "read": "closes_at" }
+      ],
+      "assemble": { "opens_at": "opens_at", "closes_at": "closes_at" }
+    }
+  }
+}

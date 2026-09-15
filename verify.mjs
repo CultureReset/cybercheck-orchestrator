@@ -98,4 +98,70 @@ console.log(`13. channel.push (map mismatch)         state=${broken.execution.st
 const repairs = await db.q(`select package_key, reason from repair_item where business_id = $1`, [biz.id]);
 console.log(`14. repair queue                        ${repairs.length ? repairs.map(r => `${r.package_key}: ${r.reason}`).join('; ') : 'EMPTY — WRONG'}`);
 
+// --- the map channel ---------------------------------------------------------
+// Up to here every map rode inside a package manifest. That is the development
+// path. The real one: maps are signed in the shop, shipped as bundles on their
+// own channel, and verified by the box before anything installs. The packages
+// below declare no routes at all — they only say the app is on the device.
+const { loadCatalog, installMap, coverage } = await import('./src/kernel/appmaps.js');
+const { signMap } = await import('./src/kernel/appmaps.js');
+const { fanOut } = await import('./src/kernel/fanout.js');
+const fs = await import('node:fs');
+
+const catalogDir = path.resolve('appmaps');
+const bundles = [];
+for (const pkg of fs.readdirSync(catalogDir, { withFileTypes: true }).filter(e => e.isDirectory())) {
+  for (const ver of fs.readdirSync(path.join(catalogDir, pkg.name), { withFileTypes: true }).filter(e => e.isDirectory())) {
+    bundles.push(JSON.parse(fs.readFileSync(path.join(catalogDir, pkg.name, ver.name, 'map.json'), 'utf8')));
+  }
+}
+for (const m of bundles) await signMap(m);
+const installedMaps = await loadCatalog(catalogDir);
+console.log(`15. signed map catalog loaded           ${installedMaps.length}  [${installedMaps.map(m => m.origin.replace('/map.json', '')).join(', ')}]`);
+
+// A map the shop did not sign, or one altered after signing, is refused.
+const tampered = structuredClone(bundles[0]);
+tampered.routes.hours.write.push({ tap: 'Confirm' });
+let refused = null;
+try { await installMap(tampered); } catch (e) { refused = e.message; }
+console.log(`16. altered map refused                 ${refused ?? 'ACCEPTED — WRONG'}`);
+
+// Three destinations on the device. Two have maps in the catalog. The third
+// does not, which is work for the shop rather than a failure on the box.
+for (const [key, androidPackage, name, screen] of [
+  ['google_business', 'com.google.android.apps.vega', 'Google Business Profile',
+   { Profile: 1, Hours: 1, opens_at: '09:00', closes_at: '17:00', Save: 1, Saved: 1 }],
+  ['facebook_pages', 'com.facebook.pages.app', 'Facebook Pages',
+   { 'Edit Page': 1, Hours: 1, opens_at: '09:00', closes_at: '17:00', 'Save Changes': 1, 'Changes saved': 1 }],
+  ['yelp_business', 'com.yelp.android.biz', 'Yelp for Business', { Hours: 1 }],
+]) {
+  registerGenerated({ key, version: '1.0.0', kind: 'channel_app', name, androidPackage, carries: [], routes: {} });
+  await installOnDevice({ businessId: biz.id, packageKey: key, accountLabel: 'demo@proof.co', initialScreen: screen });
+}
+const cover = await coverage(biz.id);
+const unmapped = cover.filter(c => c.unmapped).map(c => c.packageKey);
+console.log(`17. device apps / mapped / unmapped     ${cover.length} / ${cover.filter(c => !c.unmapped).length} / ${unmapped.join(', ') || 'none'}`);
+
+// The whole promise, mechanically: one fact changes, every destination that
+// carries it is queued. Nobody named Google or Facebook.
+await request({ ctx, capability: 'business.set_fact',
+                input: { key: 'hours', value: { opens_at: '11:00', closes_at: '20:00' } } });
+const fanned = await fanOut({ ctx, key: 'hours' });
+console.log(`18. fan-out on one fact change          queued=${fanned.queued.length}`);
+for (const d of fanned.queued) {
+  console.log(`     ${d.packageKey.padEnd(20)} ${d.state.padEnd(10)} ${d.verification ?? ''}${d.error ? '  ' + d.error : ''}`);
+}
+
+// An app moves a button. The write stops and is filed; nothing is guessed at,
+// and the other destinations are unaffected.
+const { deviceFor } = await import('./src/drivers/android.js');
+const ws = await db.one(`select * from workspace where business_id = $1 and kind = 'cloud_android'`, [biz.id]);
+deviceFor(ws.id).renameField('com.facebook.pages.app', 'closes_at', 'closing_time');
+const afterDrift = await fanOut({ ctx, key: 'hours' });
+const drifted = afterDrift.queued.filter(d => d.state !== 'succeeded').map(d => d.packageKey);
+const stillFine = afterDrift.queued.filter(d => d.state === 'succeeded').map(d => d.packageKey);
+console.log(`19. one map drifts                     broken=[${drifted.join(', ')}] unaffected=[${stillFine.join(', ')}]`);
+const queue = await db.q(`select package_key, reason from repair_item where business_id = $1 order by created_at`, [biz.id]);
+console.log(`20. repair queue after drift           ${queue.map(r => `${r.package_key}: ${r.reason}`).join('; ')}`);
+
 process.exit(0);
