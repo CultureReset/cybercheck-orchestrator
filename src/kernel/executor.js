@@ -3,6 +3,7 @@ import { getCapability, resolveDisposition } from './policy.js';
 import { writeReceipt } from './ledger.js';
 import { emit } from './events.js';
 import { makeGateway } from './gateway.js';
+import * as node from './node-approvals.js';
 // The loop every action goes through, whether it came from a dashboard click,
 // an automation, or a module calling another module.
 //
@@ -34,17 +35,24 @@ export async function request({ ctx, capability, input = {}, resource = '*', ide
      idempotencyKey]
   );
   if (disposition === 'ask') {
+    // The NODE approval gateway is the one place approvals are decided (Matt's YES / passkey).
+    let nodeReq = null;
+    if (node.enabled()) {
+      try { nodeReq = await node.ask({ execution, requester: ctx.person?.id }); }
+      catch (e) { nodeReq = { error: e.message }; }   // still parked; decide() fails closed without a grant
+    }
     await one(
-      `insert into approval (execution_id, business_id) values ($1,$2) returning *`,
-      [execution.id, ctx.businessId]
+      `insert into approval (execution_id, business_id, node_request_id) values ($1,$2,$3) returning *`,
+      [execution.id, ctx.businessId, nodeReq?.request_id ?? null]
     );
+    if (nodeReq) execution.node_approval = nodeReq;
     await emit({ businessId: ctx.businessId, topic: 'approval.requested',
                  payload: { executionId: execution.id, capability } });
     return { execution, awaitingApproval: true };
   }
   return run({ ctx, execution, cap, input });
 }
-export async function decide({ ctx, executionId, decision, note = null }) {
+export async function decide({ ctx, executionId, decision, note = null, grantId = null }) {
   const execution = await one(
     `select * from execution where id = $1 and business_id = $2`, [executionId, ctx.businessId]
   );
@@ -59,6 +67,15 @@ export async function decide({ ctx, executionId, decision, note = null }) {
     const rejected = await setState(executionId, 'rejected');
     await emit({ businessId: ctx.businessId, topic: 'execution.rejected', payload: { executionId } });
     return { execution: rejected, rejected: true };
+  }
+  if (node.enabled()) {
+    // Executor-side lock: a local "approve" is not enough; the gateway's grant for this exact action is.
+    try { await node.requireGrant(grantId, node.actionFor({ execution })); }
+    catch (e) {
+      await q(`update approval set decided_at = null, decided_by = null, decision = null, note = $1 where execution_id = $2`,
+              [`refused: ${e.message}`, executionId]);
+      return fail(`approval grant refused: ${e.message}`, 'forbidden');
+    }
   }
   await setState(executionId, 'approved');
   const cap = getCapability(execution.capability);
