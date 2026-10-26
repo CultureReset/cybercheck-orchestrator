@@ -76,7 +76,7 @@ app.get('/api/b/:slug/approvals', withContext, async (req, res) => {
 app.post('/api/b/:slug/approvals/:executionId', withContext, async (req, res) => {
   const out = await decide({
     ctx: req.ctx, executionId: req.params.executionId,
-    decision: req.body.decision, note: req.body.note ?? null,
+    decision: req.body.decision, note: req.body.note ?? null, grantId: req.body.grantId ?? null,
   });
   await drain();
   res.json(out);
